@@ -1,0 +1,40 @@
+#! /bin/sh
+#
+# phonefsod -- This shell script starts and stops the SHR Phone FSO daemon.
+#
+# chkconfig: 345 90 20
+# description: phonefsod is the GSM resource handling daemon of SHR
+# processname: phonefsod
+
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
+NAME=phonefsod
+
+[ -f /etc/default/rcS ] && . /etc/default/rcS
+
+case "$1" in
+    start)
+        echo -n "Starting SHR Phone FSO daemon: "
+        start-stop-daemon --start --pidfile /var/run/${NAME}.pid --background -x /usr/bin/${NAME}
+        if [ $? = 0 ]; then
+            echo "(ok)"
+        else
+            echo "(failed)"
+        fi
+        ;;
+    stop)
+        echo -n "Stopping SHR Phone FSO daemon: "
+        start-stop-daemon --stop --pidfile /var/run/${NAME}.pid --oknodo
+        echo "(done)"
+        ;;
+    restart|force-reload)
+        $0 stop
+        $0 start
+        ;;
+    *)
+        echo "Usage: /etc/init.d/phonefsod {start|stop|restart|force-reload}"
+        exit 1
+        ;;
+esac
+
+exit 0
+

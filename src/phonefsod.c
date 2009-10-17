@@ -7,6 +7,10 @@
  *              Klaus 'mrmoku' Kurzmann <mok@fluxnetz.de>
  *              quickdev
  *
+ * glib daemon framework
+ *              James Scott Jr. <skoona@verizon.net>
+ *              GPL2 Copyright (C) 2008 James Scott, Jr. <skoona@users.sourceforge.net>
+ *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Public License as published by
  *  the Free Software Foundation; version 2 of the license.
@@ -24,7 +28,6 @@
 #include <fcntl.h>      /* open() */
 #include <errno.h>
 #include <unistd.h>     /* daemon(), sleep(), exit() */
-#include <syslog.h>     /* openlog(), syslog(), closelog() */
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -48,7 +51,7 @@
     #define PACKAGE_VERSION "0.1.0"
 #endif
 #ifndef PACKAGE_NAME
-    #define PACKAGE_NAME "gdaemons_glib"
+    #define PACKAGE_NAME "phonefsod"
 #endif
 #ifndef PACKAGE_PIDFILE
     #define PACKAGE_PIDFILE "/var/run/"PACKAGE_NAME".pid"
@@ -127,7 +130,7 @@ _load_config()
 	if (g_key_file_load_from_file
 	    (keyfile, PHONEFSOD_CONFIG, flags, &error)) {
 		show_incoming_sms =
-			g_key_file_get_boolean(keyfile, "phonegui",
+			g_key_file_get_boolean(keyfile, "phonefsod",
 				       "show_incoming_sms", NULL);
 		gsm_reregister_timeout =
 			g_key_file_get_integer(keyfile, "phonefsod",
@@ -155,40 +158,6 @@ _reload_config()
 
 
 
- /* daemon_glib.c 
-   
-  James Scott Jr. <skoona@verizon.net>
-  Linux Example Daemons - GLIB version
-  GPL2 Copyright (C) 2008 James Scott, Jr. <skoona@users.sourceforge.net>
-  date: 6/10/2008 
-
-  syntax: gdaemon_glib [-h|--help] [-d|--debug [0|1]] [-u|--userid name ] [-v|--version] [-f|--forcepid]
-                 
-  debug=0 is off [default], 1=on, 88=on_console_mode no daemon fork
-  force=1 create or overwrite the pidfile, =0 fail if exist
-  
-  gcc `pkg-config --libs --cflags glib-2.0 gthread-2.0 gobject-2.0` -Wall -o gdaemons daemon_glib.c
-  
-  Files:
-  1. /var/run/gdaemons_glib.pid
-  2. /etc/init.d/gdaemons
-  
-  This program is free software; you can redistribute it and/or modify
-  it under the terms of the GNU General Public License as published by
-  the Free Software Foundation; either version 2 of the License, or
-  (at your option) any later version.
-
-  This program is distributed in the hope that it will be useful,
-  but WITHOUT ANY WARRANTY; without even the implied warranty of
-  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  GNU General Public License for more details.
-
-  You should have received a copy of the GNU General Public License
-  along with this program; if not, write to the Free Software
-  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
-*/  
-
-
 /*
  * _process_signals()
  *
@@ -200,9 +169,9 @@ _reload_config()
  * Returns/Affects:
  *   returns current value of the atomic int gd_flag_exit
  *   returns true (or current value) if nothing needs done
- *   returns 0 or false if exit is required 
+ *   returns 0 or false if exit is required
 */
-static gint _process_signals ( siginfo_t *signal_info) 
+static gint _process_signals ( siginfo_t *signal_info)
 {
 	int rval = g_atomic_int_get(&gd_flag_exit); /* use existing value */
 	gint sig = 0;
@@ -346,7 +315,7 @@ static gint _handle_command_line(int argc, char **argv,
 	};
 
 	/* Get command line parms */    
-	*context = g_option_context_new (" => GLIB Daemon Example [2008] <skoona@users.sourceforge.net>");
+	*context = g_option_context_new (" => SHR Phone FSO Daemon");
 	g_option_context_add_main_entries(*context, entries, NULL);
 	g_option_context_set_ignore_unknown_options(*context, FALSE);
 	if (!(g_option_context_parse(*context, &argc, &argv, &gerror))) {
