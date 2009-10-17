@@ -1,6 +1,6 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-phonefsod-usage-service-glue.h: ${top_builddir}/src/dbus/phonefsod-usage.xml
+phonefsod-usage-service-glue.h: $(SPECS_PATH)/org.shr.phonefso.Usage.xml
 	$(DBUSBINDINGTOOL) --mode=glib-server --output=$@ --prefix=phonefsod_usage_service $^
 
 EXTRA_DIST = dbus/phonefsod-usage.xml
