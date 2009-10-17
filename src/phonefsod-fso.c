@@ -179,13 +179,13 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 	g_debug("sim_auth_active: %d", sim_auth_active);
 	if (sim_auth_active) {
 		sim_auth_active = FALSE;
-		phoneuid_dialogs_hide_sim_auth(status);
+		phoneuid_notification_hide_sim_auth(status);
 	}
 
 	if (status != SIM_READY) {
 		if (!sim_auth_active) {
 			sim_auth_active = TRUE;
-			phoneuid_dialogs_show_sim_auth(status);
+			phoneuid_notification_show_sim_auth(status);
 		}
 		return;
 	}
@@ -212,7 +212,7 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 		}
 		else if (IS_SIM_ERROR(error, SIM_ERROR_NOT_PRESENT)) {
 			g_message("SIM card not present.");
-			phoneuid_dialogs_show_dialog(
+			phoneuid_notification_show_dialog(
 				PHONEGUI_DIALOG_SIM_NOT_PRESENT);
 			return;
 		}
@@ -309,7 +309,7 @@ _get_messagebook_info_callback(GError * error, GHashTable * info,
 		total = last - first + 1;
 		g_debug("messagebook info: first: %d, last %d, used: %d, total %d", first, last, used, total);
 		if (used == total) {
-			phoneuid_dialogs_show_dialog(
+			phoneuid_notification_show_dialog(
 					PHONEGUI_DIALOG_MESSAGE_STORAGE_FULL);
 		}
 	}
@@ -509,7 +509,7 @@ fso_sim_auth_status_handler(const int status)
 
 		if (sim_auth_active) {
 			sim_auth_active = FALSE;
-			phoneuid_dialogs_hide_sim_auth(status);
+			phoneuid_notification_hide_sim_auth(status);
 		}
 		fso_set_antenna_power();
 	}
@@ -517,7 +517,7 @@ fso_sim_auth_status_handler(const int status)
 		g_debug("sim not ready");
 		if (!sim_auth_active) {
 			sim_auth_active = TRUE;
-			phoneuid_dialogs_show_sim_auth(status);
+			phoneuid_notification_show_sim_auth(status);
 		}
 	}
 }
@@ -561,7 +561,7 @@ fso_incoming_ussd_handler(int mode, const char *message)
 {
 	g_debug("fso_incoming_ussd_handler(mode=%d, message=%s)", mode,
 		message);
-	phoneuid_dialogs_show_ussd(mode, message);
+	phoneuid_notification_show_ussd(mode, message);
 }
 
 /* --- NetworkStatus --- */

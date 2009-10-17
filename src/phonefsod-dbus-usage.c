@@ -66,7 +66,7 @@ phonefsod_usage_service_init(PhonefsodUsageService * object)
 
 	/* Register DBUS path */
 	dbus_g_connection_register_g_object(klass->connection,
-			PHONEFSOD_USAGE_SERVICE_PATH,
+			PHONEFSOD_USAGE_PATH,
 			G_OBJECT (object));
 
 	/* Register the service name, the constant here are defined in dbus-glib-bindings.h */
@@ -76,7 +76,7 @@ phonefsod_usage_service_init(PhonefsodUsageService * object)
 			DBUS_INTERFACE_DBUS);
 
 	if (!org_freedesktop_DBus_request_name (driver_proxy,
-			PHONEFSOD_USAGE_SERVICE_NAME, 0, &request_ret, &error)) {
+			PHONEFSOD_USAGE_NAME, 0, &request_ret, &error)) {
 		g_warning("Unable to register service: %s", error->message);
 		g_error_free (error);
 	}

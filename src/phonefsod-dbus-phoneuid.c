@@ -38,7 +38,7 @@ _dbus_get_proxy(const char *name, const char *path, const char *interface)
 	return (proxy);
 }
 
-/* --- org.shr.phoneuid.CallManagement --- */
+/* --- org.shr.phoneui.CallManagement --- */
 void phoneuid_call_management_show_incoming(int callid, int status,
 		const char *number)
 {
@@ -109,7 +109,7 @@ phoneuid_call_management_hide_outgoing(int callid)
 	}
 }
 
-/* --- org.shr.phoneuid.Messages --- */
+/* --- org.shr.phoneui.Messages --- */
 void
 phoneuid_messages_display_item(const char *message_path)
 {
@@ -127,14 +127,14 @@ phoneuid_messages_display_item(const char *message_path)
 	}
 }
 
-/* --- org.shr.phoneuid.Dialogs --- */
+/* --- org.shr.phoneui.Notification --- */
 void
-phoneuid_dialogs_show_dialog(int dialog)
+phoneuid_notification_show_dialog(int dialog)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_DIALOGS_NAME,
-			PHONEUID_DIALOGS_PATH,
-			PHONEUID_DIALOGS_INTERFACE);
+			(PHONEUID_NOTIFICATION_NAME,
+			PHONEUID_NOTIFICATION_PATH,
+			PHONEUID_NOTIFICATION_INTERFACE);
 	if (proxy) {
 		GError *error = NULL;
 		dbus_g_proxy_call(proxy, "DisplayDialog", &error,
@@ -146,18 +146,55 @@ phoneuid_dialogs_show_dialog(int dialog)
 }
 
 void
-phoneuid_dialogs_show_sim_auth(int status)
+phoneuid_notification_show_sim_auth(int status)
 {
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_NOTIFICATION_NAME,
+			PHONEUID_NOTIFICATION_PATH,
+			PHONEUID_NOTIFICATION_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "DisplaySimAuth", &error,
+				G_TYPE_INT, status, G_TYPE_INVALID,
+				G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
 }
 
 void
-phoneuid_dialogs_hide_sim_auth(int status)
+phoneuid_notification_hide_sim_auth(int status)
 {
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_NOTIFICATION_NAME,
+			PHONEUID_NOTIFICATION_PATH,
+			PHONEUID_NOTIFICATION_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "HideSimAuth", &error,
+				G_TYPE_INT, status, G_TYPE_INVALID,
+				G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
 }
 
 void
-phoneuid_dialogs_show_ussd(int mode, const char *message)
+phoneuid_notification_show_ussd(int mode, const char *message)
 {
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_NOTIFICATION_NAME,
+			PHONEUID_NOTIFICATION_PATH,
+			PHONEUID_NOTIFICATION_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "DisplayUssd", &error,
+				G_TYPE_INT, mode,
+				G_TYPE_STRING, message,
+				G_TYPE_INVALID, G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
 }
 
 
