@@ -1,43 +1,40 @@
 MAINTAINERCLEANFILES = Makefile.in
 
-ophonekitd-usage-service-glue.h: ${top_builddir}/src/dbus/ophonekitd-usage.xml
-	$(DBUSBINDINGTOOL) --mode=glib-server --output=$@ --prefix=ophonekitd_usage_service $^
+phonefsod-usage-service-glue.h: ${top_builddir}/src/dbus/phonefsod-usage.xml
+	$(DBUSBINDINGTOOL) --mode=glib-server --output=$@ --prefix=phonefsod_usage_service $^
 
-EXTRA_DIST = dbus/ophonekitd-usage.xml
+EXTRA_DIST = dbus/phonefsod-usage.xml
 
-bin_PROGRAMS = ophonekitd
-dbus_sources = ophonekitd-usage-service-glue.h
+bin_PROGRAMS = phonefsod
+dbus_sources = phonefsod-usage-service-glue.h
 
 
 BUILT_SOURCES = $(dbus_sources)
 
-ophonekitd_SOURCES = $(dbus_sources) \
-	ophonekitd-main.c \
-	ophonekitd-main.h \
-	ophonekitd-fso.c \
-	ophonekitd-fso.h \
-	ophonekitd-dbus-usage.c \
-	ophonekitd-dbus-usage.h \
-	ophonekitd-dbus.c \
-	ophonekitd-dbus.h \
-	ophonekitd-dbus-common.h \
-	ophonekitd-phoneuid-dbus.c \
-	ophonekitd-phoneuid-dbus.h
+phonefsod_SOURCES = $(dbus_sources) \
+	phonefsod.c \
+	phonefsod-fso.c \
+	phonefsod-fso.h \
+	phonefsod-dbus.c \
+	phonefsod-dbus.h \
+	phonefsod-dbus-common.h \
+	phonefsod-dbus-usage.c \
+	phonefsod-dbus-usage.h \
+	phonefsod-dbus-phoneuid.c \
+	phonefsod-dbus-phoneuid.h
 
-ophonekitd_CFLAGS = \
+phonefsod_CFLAGS = \
 	-DDATADIR=\"$(datadir)\" \
 	-DPKGDATADIR=\"$(pkgdatadir)\" \
-	-DOPHONEKITD_CONFIG=\"$(sysconfdir)/ophonekitd.conf\" \
+	-DPHONEFSOD_CONFIG=\"$(sysconfdir)/phonefsod.conf\" \
 	@DBUS_GLIB_CFLAGS@ \
 	@DBUS_CFLAGS@ \
 	@FRAMEWORKD_GLIB_CFLAGS@ \
-	@FRAMEWORKD_PHONEGUI_LIBS@  \
 	-ggdb
 
-ophonekitd_LDFLAGS = \
+phonefsod_LDFLAGS = \
 	-ldl \
 	@DBUS_GLIB_LIBS@ \
 	@DBUS_LIBS@ \
-	@FRAMEWORKD_GLIB_LIBS@ \
-	@FRAMEWORKD_PHONEGUI_LIBS@ 
+	@FRAMEWORKD_GLIB_LIBS@
 

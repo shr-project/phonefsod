@@ -1,6 +1,6 @@
 
-#ifndef _OPHONEKITD_GLOBALS_H
-#define _OPHONEKITD_GLOBALS_H
+#ifndef _PHONEFSOD_GLOBALS_H
+#define _PHONEFSOD_GLOBALS_H
 
 gboolean show_incoming_sms;
 

@@ -1,5 +1,5 @@
-#ifndef _OPHONEKITD_PHONEUID_DBUS_H
-#define _OPHONEKITD_PHONEUID_DBUS_H
+#ifndef _PHONEFSOD_DBUS_PHONEUID_H
+#define _PHONEFSOD_DBUS_PHONEUID_H
 
 /* --- org.shr.phoneuid.CallManagement --- */
 void

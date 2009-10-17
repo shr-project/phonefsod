@@ -4,9 +4,9 @@
 #include <dbus/dbus-glib-lowlevel.h>
 #include <dbus/dbus-glib.h>
 #include <dbus/dbus-glib-bindings.h>
-#include "ophonekitd-phoneuid-dbus.h"
-#include "ophonekitd-globals.h"
-#include "../phoneuid/phoneuid-dbus-common.h"
+#include "phonefsod-dbus-common.h"
+#include "phonefsod-dbus-phoneuid.h"
+#include "phonefsod-globals.h"
 
 
 static void

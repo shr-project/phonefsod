@@ -3,6 +3,7 @@
  *      Authors (alphabetical) :
  *              Marc-Olivier Barre <marco@marcochapeau.org>
  *              Julien Cassignol <ainulindale@gmail.com>
+ *              Klaus 'mrmoku' Kurzmann <mok@fluxnetz.de>
  *              quickdev
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -15,9 +16,9 @@
  *  GNU Lesser Public License for more details.
  */
 
-#ifndef _OPHONEKITD_DBUS_H
-#define _OPHONEKITD_DBUS_H
+#ifndef _PHONEFSOD_DBUS_H
+#define _PHONEFSOD_DBUS_H
 
-void ophonekitd_dbus_setup();
+void phonefsod_dbus_setup();
 
 #endif

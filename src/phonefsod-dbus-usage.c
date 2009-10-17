@@ -4,6 +4,7 @@
  *              Marc-Olivier Barre <marco@marcochapeau.org>
  *              Julien Cassignol <ainulindale@gmail.com>
  *              Andreas Engelbredt Dalsgaard <andreas.dalsgaard@gmail.com>
+ *              Klaus 'mrmoku' Kurzmann <mok@fluxnetz.de>
  *              quickdev
  *
  *  This program is free software; you can redistribute it and/or modify
@@ -18,47 +19,85 @@
 
 #include <glib.h>
 #include <glib/gthread.h>
+#include <dbus/dbus-glib-bindings.h>
 #include <frameworkd-glib/frameworkd-glib-dbus.h>
 #include <frameworkd-glib/ousaged/frameworkd-glib-ousaged.h>
-#include "ophonekitd-dbus-usage.h"
-#include "ophonekitd-main.h"
-#include "ophonekitd-globals.h"
+#include "phonefsod-dbus-common.h"
+#include "phonefsod-dbus-usage.h"
+#include "phonefsod-globals.h"
+#include "phonefsod-usage-service-glue.h"
 
-G_DEFINE_TYPE(OphonekitdUsageService, ophonekitd_usage_service, G_TYPE_OBJECT)
+G_DEFINE_TYPE(PhonefsodUsageService, phonefsod_usage_service, G_TYPE_OBJECT)
 
 
 int resources[OUSAGED_RESOURCE_COUNT];
 
 
 static void
-ophonekitd_usage_service_class_init(OphonekitdUsageServiceClass * klass)
+phonefsod_usage_service_class_init(PhonefsodUsageServiceClass * klass)
 {
-//    dbus_g_object_type_install_info (G_OBJECT_TYPE (klass), &dbus_glib_ophonekitd_usage_service_object_info);
+	GError *error = NULL;
+
+	/* Init the DBus connection, per-klass */
+	klass->connection = dbus_g_bus_get (DBUS_BUS_SYSTEM, &error);
+	if (klass->connection == NULL) {
+		g_warning("Unable to connect to dbus: %s", error->message);
+		g_error_free (error);
+		return;
+	}
+
+	dbus_g_object_type_install_info (PHONEFSOD_TYPE_USAGE_SERVICE,
+			&dbus_glib_phonefsod_usage_service_object_info);
 }
 
 static void
-ophonekitd_usage_service_init(OphonekitdUsageService * object)
+phonefsod_usage_service_init(PhonefsodUsageService * object)
 {
+	GError *error = NULL;
+	DBusGProxy *driver_proxy;
+	int request_ret;
 	int f;
+
 	for (f = 0; f < OUSAGED_RESOURCE_COUNT; f++)
 		resources[f] = 0;
+
+	PhonefsodUsageServiceClass *klass =
+		PHONEFSOD_USAGE_SERVICE_GET_CLASS(object);
+
+	/* Register DBUS path */
+	dbus_g_connection_register_g_object(klass->connection,
+			PHONEFSOD_USAGE_SERVICE_PATH,
+			G_OBJECT (object));
+
+	/* Register the service name, the constant here are defined in dbus-glib-bindings.h */
+	driver_proxy = dbus_g_proxy_new_for_name (klass->connection,
+			DBUS_SERVICE_DBUS,
+			DBUS_PATH_DBUS,
+			DBUS_INTERFACE_DBUS);
+
+	if (!org_freedesktop_DBus_request_name (driver_proxy,
+			PHONEFSOD_USAGE_SERVICE_NAME, 0, &request_ret, &error)) {
+		g_warning("Unable to register service: %s", error->message);
+		g_error_free (error);
+	}
+	g_object_unref(driver_proxy);
 }
 
 
-OphonekitdUsageService *
-ophonekitd_usage_service_new(void)
+PhonefsodUsageService *
+phonefsod_usage_service_new(void)
 {
-	return g_object_new(OPHONEKITD_TYPE_USAGE_SERVICE, NULL);
+	return g_object_new(PHONEFSOD_TYPE_USAGE_SERVICE, NULL);
 }
 
 void
-ophonekitd_usage_service_register_ui_handler(OphonekitdUsageService *object,
+phonefsod_usage_service_register_ui_handler(PhonefsodUsageService *object,
 		const char *bus_path, DBusGMethodInvocation *context)
 {
 	GError *error = NULL;
 	/* only one handler is allowed ! */
 	//if (ui_handler_bus) {
-	//	GError *error = g_error_new(q_quark_from_sring("ophonekitd"),
+	//	GError *error = g_error_new(q_quark_from_sring("phonefsod"),
 	//			USAGE_ERROR_HANDLER_ALREADY_REGISTERED,
 	//			"There is already a handler registered");
 	//	dbus_g_method_return_error(context, error);
@@ -79,7 +118,7 @@ ophonekitd_usage_service_register_ui_handler(OphonekitdUsageService *object,
 
 
 void
-ophonekitd_usage_get_resource_state_callback(GError * error, gboolean state,
+phonefsod_usage_get_resource_state_callback(GError * error, gboolean state,
 					     gpointer userdata)
 {
 	DBusGMethodInvocation *context = (DBusGMethodInvocation *) userdata;
@@ -90,13 +129,13 @@ ophonekitd_usage_get_resource_state_callback(GError * error, gboolean state,
 }
 
 void
-ophonekitd_usage_service_get_resource_state(OphonekitdUsageService * object,
+phonefsod_usage_service_get_resource_state(PhonefsodUsageService * object,
 					    const char *resource,
 					    DBusGMethodInvocation * context)
 {
 	if (resource != NULL)
 		ousaged_get_resource_state(resource,
-					   ophonekitd_usage_get_resource_state_callback,
+					   phonefsod_usage_get_resource_state_callback,
 					   context);
 }
 
@@ -104,12 +143,12 @@ typedef struct {
 	DBusGMethodInvocation *context;
 	char *resource;
 	int res;
-} ophonekitd_usage_request_resource_data_t;
+} phonefsod_usage_request_resource_data_t;
 
 void
-ophonekitd_usage_request_resource_callback(GError * error, gpointer userdata)
+phonefsod_usage_request_resource_callback(GError * error, gpointer userdata)
 {
-	ophonekitd_usage_request_resource_data_t *data = userdata;
+	phonefsod_usage_request_resource_data_t *data = userdata;
 
 	if (error != NULL) {
 		g_debug("error: %s", error->message);
@@ -124,7 +163,7 @@ ophonekitd_usage_request_resource_callback(GError * error, gpointer userdata)
 }
 
 void
-ophonekitd_usage_service_request_resource(OphonekitdUsageService * object,
+phonefsod_usage_service_request_resource(PhonefsodUsageService * object,
 					  const char *resource,
 					  DBusGMethodInvocation * context)
 {
@@ -135,22 +174,22 @@ ophonekitd_usage_service_request_resource(OphonekitdUsageService * object,
 			dbus_g_method_return(context);
 			return;
 		}
-		ophonekitd_usage_request_resource_data_t *data =
+		phonefsod_usage_request_resource_data_t *data =
 			g_malloc(sizeof
-				 (ophonekitd_usage_request_resource_data_t));
+				 (phonefsod_usage_request_resource_data_t));
 		data->context = context;
 		data->resource = g_strdup(resource);
 		data->res = res;
 		ousaged_request_resource(resource,
-					 ophonekitd_usage_request_resource_callback,
+					 phonefsod_usage_request_resource_callback,
 					 data);
 	}
 }
 
 void
-ophonekitd_usage_release_resource_callback(GError * error, gpointer userdata)
+phonefsod_usage_release_resource_callback(GError * error, gpointer userdata)
 {
-	ophonekitd_usage_request_resource_data_t *data = userdata;
+	phonefsod_usage_request_resource_data_t *data = userdata;
 	if (error != NULL) {
 		g_debug("error: %s", error->message);
 	}
@@ -163,7 +202,7 @@ ophonekitd_usage_release_resource_callback(GError * error, gpointer userdata)
 }
 
 void
-ophonekitd_usage_service_release_resource(OphonekitdUsageService * object,
+phonefsod_usage_service_release_resource(PhonefsodUsageService * object,
 					  const char *resource,
 					  DBusGMethodInvocation * context)
 {
@@ -174,14 +213,14 @@ ophonekitd_usage_service_release_resource(OphonekitdUsageService * object,
 			dbus_g_method_return(context);
 			return;
 		}
-		ophonekitd_usage_request_resource_data_t *data =
+		phonefsod_usage_request_resource_data_t *data =
 			g_malloc(sizeof
-				 (ophonekitd_usage_request_resource_data_t));
+				 (phonefsod_usage_request_resource_data_t));
 		data->context = context;
 		data->resource = g_strdup(resource);
 		data->res = res;
 		ousaged_release_resource(resource,
-					 ophonekitd_usage_release_resource_callback,
+					 phonefsod_usage_release_resource_callback,
 					 data);
 	}
 }
