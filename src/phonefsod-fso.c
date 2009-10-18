@@ -22,6 +22,7 @@
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
 
+
 typedef struct {
 	int id;
 } call_t;
@@ -539,21 +540,21 @@ fso_incoming_message_handler(char *message_path)
 {
 	g_debug("fso_incoming_message_handler()");
 	if (show_incoming_sms)
-		phoneuid_messages_display_item(message_path);
+		phoneuid_messages_display_message(message_path);
 	ogsmd_sim_get_messagebook_info(_get_messagebook_info_callback, NULL);
 }
 
 
 /* --- IncomingStoredMessage --- */
-void
-fso_sim_incoming_stored_message_handler(const int id)
-{
-	g_debug("fso_sim_incoming_stored_message_handler()");
-	if (show_incoming_sms == TRUE) {
-		phoneuid_messages_display_item(id);
-	}
-	ogsmd_sim_get_messagebook_info(_get_messagebook_info_callback, NULL);
-}
+//void
+//fso_sim_incoming_stored_message_handler(const int id)
+//{
+//	g_debug("fso_sim_incoming_stored_message_handler()");
+//	if (show_incoming_sms == TRUE) {
+//		phoneuid_messages_display_message(id);
+//	}
+//	ogsmd_sim_get_messagebook_info(_get_messagebook_info_callback, NULL);
+//}
 
 /* --- IncomingUssd --- */
 void
