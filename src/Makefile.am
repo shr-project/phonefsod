@@ -33,7 +33,6 @@ phonefsod_CFLAGS = \
 	-ggdb
 
 phonefsod_LDFLAGS = \
-	-ldl \
 	@DBUS_GLIB_LIBS@ \
 	@DBUS_LIBS@ \
 	@FRAMEWORKD_GLIB_LIBS@
