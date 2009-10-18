@@ -27,6 +27,7 @@
 #include "phonefsod-globals.h"
 #include "phonefsod-usage-service-glue.h"
 
+
 G_DEFINE_TYPE(PhonefsodUsageService, phonefsod_usage_service, G_TYPE_OBJECT)
 
 
@@ -95,20 +96,10 @@ phonefsod_usage_service_register_ui_handler(PhonefsodUsageService *object,
 		const char *bus_path, DBusGMethodInvocation *context)
 {
 	GError *error = NULL;
-	/* only one handler is allowed ! */
-	//if (ui_handler_bus) {
-	//	GError *error = g_error_new(q_quark_from_sring("phonefsod"),
-	//			USAGE_ERROR_HANDLER_ALREADY_REGISTERED,
-	//			"There is already a handler registered");
-	//	dbus_g_method_return_error(context, error);
-	//	return;
-	//}
-
 	g_debug("RegisterUiHandler %s", bus_path);
-	if (session_bus)
-		dbus_g_connection_unref(session_bus);
-	setenv("DBUS_SESSION_BUS_ADDRESS", bus_path);
-	session_bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
+	g_setenv("DBUS_SESSION_BUS_ADDRESS", bus_path, TRUE);
+	g_debug("connecting to session bus at %s", g_getenv("DBUS_SESSION_BUS_ADDRESS"));
+	//session_bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
 	if (error) {
 		g_debug("failed... %d %s", error->code, error->message);
 	}

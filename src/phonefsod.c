@@ -314,7 +314,7 @@ static gint _handle_command_line(int argc, char **argv,
 		{NULL}
 	};
 
-	/* Get command line parms */    
+	/* Get command line parms */
 	*context = g_option_context_new (" => SHR Phone FSO Daemon");
 	g_option_context_add_main_entries(*context, entries, NULL);
 	g_option_context_set_ignore_unknown_options(*context, FALSE);
@@ -330,7 +330,7 @@ static gint _handle_command_line(int argc, char **argv,
 	if (gd_b_version) {
 		g_print ("SHR PhoneFSO Daemon\n%s Version %s\n%s\n\n",
 			PACKAGE_NAME, PACKAGE_VERSION,
-			"GPLv2 (2009) <mok@fluxnetz.de>");
+			"GPLv2 (2009) the SHR Team");
 		g_option_context_free(*context);
 		g_atomic_int_set(&gd_flag_exit, 0); /* flag an exit */
 
@@ -519,7 +519,14 @@ extern int main (int argc, char *argv[])
 	_load_config();
 
 	/* setup dbus server part */
-	phonefsod_dbus_setup();
+	GError *error = NULL;
+
+	phonefsod_usage_service_new();
+
+	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error);
+	if (error) {
+		g_error("%d: %s", error->code, error->message);
+	}
 
 	/* initialize libframeworkd-glib */
 	FrameworkdHandler *fwHandler = frameworkd_handler_new();

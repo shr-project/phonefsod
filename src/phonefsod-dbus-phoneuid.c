@@ -27,14 +27,8 @@ _dbus_error(GError *error)
 static DBusGProxy *
 _dbus_get_proxy(const char *name, const char *path, const char *interface)
 {
-	if (!session_bus) {
-		g_warning("no UI handler registered with us :(");
-		return (NULL);
-	}
-
-	DBusGProxy *proxy = dbus_g_proxy_new_for_name(session_bus,
+	DBusGProxy *proxy = dbus_g_proxy_new_for_name(system_bus,
 			name, path, interface);
-
 	return (proxy);
 }
 
@@ -95,8 +89,8 @@ phoneuid_call_management_show_outgoing(int callid, int status,
 void
 phoneuid_call_management_hide_outgoing(int callid)
 {
-	DBusGProxy *proxy = dbus_g_proxy_new_for_name(session_bus,
-			PHONEUID_CALL_MANAGEMENT_NAME,
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_CALL_MANAGEMENT_NAME,
 			PHONEUID_CALL_MANAGEMENT_PATH,
 			PHONEUID_CALL_MANAGEMENT_INTERFACE);
 	if (proxy) {
@@ -111,7 +105,7 @@ phoneuid_call_management_hide_outgoing(int callid)
 
 /* --- org.shr.phoneui.Messages --- */
 void
-phoneuid_messages_display_item(const char *message_path)
+phoneuid_messages_display_message(const char *message_path)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
 			(PHONEUID_MESSAGES_NAME,
@@ -119,7 +113,7 @@ phoneuid_messages_display_item(const char *message_path)
 			PHONEUID_MESSAGES_INTERFACE);
 	if (proxy) {
 		GError *error = NULL;
-		dbus_g_proxy_call (proxy, "DisplayItem", &error,
+		dbus_g_proxy_call (proxy, "DisplayMessage", &error,
 			G_TYPE_STRING, message_path, G_TYPE_INVALID,
 			G_TYPE_INVALID);
 		if (error)

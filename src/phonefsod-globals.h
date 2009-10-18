@@ -7,6 +7,5 @@ gboolean show_incoming_sms;
 int gsm_reregister_timeout;
 
 DBusGConnection *system_bus;
-DBusGConnection *session_bus;
 
 #endif

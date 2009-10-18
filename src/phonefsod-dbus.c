@@ -29,54 +29,7 @@
 
 
 
-static gpointer
-_dbus_register_object(DBusGConnection * connection,
-		     DBusGProxy * proxy,
-		     GType object_type,
-		     const DBusGObjectInfo * info, const gchar * path)
-{
-	g_debug(path);
-	GObject *object = g_object_new(object_type, NULL);
-	dbus_g_object_type_install_info(object_type, info);
-	dbus_g_connection_register_g_object(connection, path, object);
-	return object;
-}
-
 void
 phonefsod_dbus_setup()
 {
-	g_object_new(PHONEFSOD_TYPE_USAGE_SERVICE, NULL);
-//	GError *error = NULL;
-//	guint result;
-//	DBusGProxy *proxy;
-//
-//	g_debug("get on the bus");
-//	session_bus = NULL;
-//	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error);
-//	if (error) {
-//		g_error("%d: %s", error->code, error->message);
-//	}
-//	proxy = dbus_g_proxy_new_for_name(system_bus,
-//					  DBUS_SERVICE_DBUS,
-//					  DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS);
-//
-//
-//	if (!org_freedesktop_DBus_request_name(proxy,
-//					       PHONEFSOD_USAGE_SERVICE_NAME,
-//					       DBUS_NAME_FLAG_DO_NOT_QUEUE,
-//					       &result, &error)) {
-//		g_debug("Error requesting name! %s", error->message);
-//	}
-//
-//
-//	if (result != DBUS_REQUEST_NAME_REPLY_PRIMARY_OWNER) {
-//		g_debug("Got result code %u from requesting name", result);
-//	}
-//
-//	_dbus_register_object(system_bus,
-//			     proxy,
-//			     PHONEFSOD_TYPE_USAGE_SERVICE,
-//			     &dbus_glib_phonefsod_usage_service_object_info,
-//			     PHONEFSOD_USAGE_SERVICE_PATH);
-//
 }
