@@ -113,6 +113,7 @@ _log_handler(const gchar *domain, GLogLevelFlags level, const gchar *message,
 	strftime(date_str, 30, "%Y.%m.%d %T", &ptime);
 
 	fprintf(logfile, "%s.%06d [%s]\t %s\n", date_str, tv.tv_usec, domain, message);
+	fflush(logfile);
 }
 
 static void
