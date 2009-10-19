@@ -27,6 +27,7 @@ phonefsod_CFLAGS = \
 	-DDATADIR=\"$(datadir)\" \
 	-DPKGDATADIR=\"$(pkgdatadir)\" \
 	-DPHONEFSOD_CONFIG=\"$(sysconfdir)/phonefsod.conf\" \
+	-DG_LOG_DOMAIN=\"phonefsod\" \
 	@DBUS_GLIB_CFLAGS@ \
 	@DBUS_CFLAGS@ \
 	@FRAMEWORKD_GLIB_CFLAGS@ \
