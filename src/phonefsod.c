@@ -195,8 +195,8 @@ static gint _process_signals ( siginfo_t *signal_info)
 		case SI_TKILL:  pch="tkill(2) or tgkill(2)"; break;
 		default: pch = "<unknown>"; break;
 		}
-		g_debug("%s received from => %s ?[pid=%d, uid=%d]{Ignored}", 
-                  g_strsignal(sig), pch, signal_info->si_pid,signal_info->si_uid);            
+		g_debug("%s received from => %s ?[pid=%d, uid=%d]{Ignored}",
+                  g_strsignal(sig), pch, signal_info->si_pid,signal_info->si_uid);
 		break;
 	case SIGCHLD:   /* some child ended */
 		switch (signal_info->si_code) {
@@ -211,12 +211,11 @@ static gint _process_signals ( siginfo_t *signal_info)
 		g_debug("%s received for pid => %d, w/rc => %d for this reason => %s {Ignored}",
                     g_strsignal(sig), signal_info->si_pid, signal_info->si_status, pch);
 		break;
-	case SIGQUIT:   /* often used to signal an orderly shutdown */            
-	case SIGINT:    /* often used to signal an orderly shutdown */ 
+	case SIGQUIT:   /* often used to signal an orderly shutdown */
+	case SIGINT:    /* often used to signal an orderly shutdown */
 	case SIGPWR:    /* Power Failure */
 	case SIGKILL:   /* Fatal Exit flag */ 
 	case SIGTERM:   /* Immediately Fatal Exit flag */
-	default:
 		switch (signal_info->si_code) {
 		case SI_USER:  pch="kill(2) or raise(3)"; break;
 		case SI_KERNEL:  pch="Sent by the kernel."; break;
@@ -232,6 +231,9 @@ static gint _process_signals ( siginfo_t *signal_info)
 			g_strsignal(sig), pch, signal_info->si_pid,
 			signal_info->si_uid);
 		rval = 0;
+		break;
+	default:
+		g_debug("%s received => {Ignored}", g_strsignal(sig));
 		break;
 	} /* end switch */
 
