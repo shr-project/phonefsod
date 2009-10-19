@@ -206,6 +206,7 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 			 * there's no auth status signal emitted
 			 */
 			if (!sim_auth_active) {
+				g_debug("getting SIM auth status...");
 				ogsmd_sim_get_auth_status
 					(_sim_auth_status_callback, NULL);
 			}
@@ -220,6 +221,7 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 		else if (IS_RESOURCE_ERROR(error, RESOURCE_ERROR_NOT_ENABLED)) {
 			g_message("GSM is not yet enabled, try again in 1s");
 			g_timeout_add(1000, fso_set_antenna_power, NULL);
+			return;
 		}
 		else if (IS_FRAMEWORKD_GLIB_DBUS_ERROR
 			 (error,
