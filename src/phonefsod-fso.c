@@ -106,7 +106,7 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 			i++;
 		}
 
-		if (gsm_available)
+		if (gsm_available) // TODO: airplane mode
 			fso_request_gsm();
 	}
 }
@@ -177,17 +177,8 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 {
 	g_debug("sim_auth_status_callback()");
 
-	g_debug("sim_auth_active: %d", sim_auth_active);
-	if (sim_auth_active) {
-		sim_auth_active = FALSE;
-		phoneuid_notification_hide_sim_auth(status);
-	}
-
 	if (status != SIM_READY) {
-		if (!sim_auth_active) {
-			sim_auth_active = TRUE;
-			phoneuid_notification_show_sim_auth(status);
-		}
+		phoneuid_notification_show_sim_auth(status);
 		return;
 	}
 
@@ -376,13 +367,8 @@ fso_resource_changed_handler(const char *name, gboolean state,
 		if (gsm_ready ^ state) {
 			gsm_ready = state;
 			if (gsm_ready) {
-				/* TODO: remove this workaround when fsousaged
-				 * sends the signal when the GSM resource
-				 * actually is really ready - until then give
-				 * it some time to get it ready ... */
-				fso_set_antenna_power();
-				ogsmd_sim_get_sim_ready
-					(_sim_ready_status_callback, NULL);
+				ogsmd_sim_get_auth_status
+					(_sim_auth_status_callback, NULL);
 			}
 		}
 	}
@@ -509,19 +495,7 @@ fso_sim_auth_status_handler(const int status)
 	g_debug("fso_sim_auth_status_handler()");
 	if (status == SIM_READY) {
 		g_debug("sim auth ready");
-
-		if (sim_auth_active) {
-			sim_auth_active = FALSE;
-			phoneuid_notification_hide_sim_auth(status);
-		}
 		fso_set_antenna_power();
-	}
-	else {
-		g_debug("sim not ready");
-		if (!sim_auth_active) {
-			sim_auth_active = TRUE;
-			phoneuid_notification_show_sim_auth(status);
-		}
 	}
 }
 
