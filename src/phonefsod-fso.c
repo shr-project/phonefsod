@@ -95,7 +95,7 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 	/* if we successfully got a list of resources...
 	 * check if GSM is within them and request it if
 	 * so, otherwise wait for ResourceAvailable signal */
-	if (error == NULL) {
+	if (error == NULL && resources) {
 		int i = 0;
 		while (resources[i] != NULL) {
 			g_debug("Resource %s available", resources[i]);
