@@ -95,6 +95,7 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 	/* if we successfully got a list of resources...
 	 * check if GSM is within them and request it if
 	 * so, otherwise wait for ResourceAvailable signal */
+	g_debug("list_resources_callback(%s,%X)", error ? error->message : "ok", resources);
 	if (error == NULL && resources) {
 		int i = 0;
 		while (resources[i] != NULL) {
@@ -114,6 +115,7 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 gboolean
 fso_list_resources(void)
 {
+	g_debug("fso_list_resources()");
 	ousaged_list_resources(_list_resources_callback, NULL);
 	return (FALSE);
 }
@@ -164,8 +166,10 @@ _sim_ready_status_callback(GError * error, gboolean status, gpointer userdata)
 	}
 
 	/* if sim is already ready (by the ReadyStatus signal) - nothing to do */
-	if (sim_ready)
+	if (sim_ready) {
+		g_debug("SIM was already ready... nothing to do");
 		return;
+	}
 
 	g_debug("_sim_ready_status_callback(status=%d)", status);
 	if (status)
@@ -182,6 +186,7 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 		return;
 	}
 
+	g_debug("SIM authenticated");
 	fso_set_antenna_power();
 	ogsmd_sim_get_sim_ready(_sim_ready_status_callback, NULL);
 }
@@ -403,6 +408,7 @@ fso_device_idle_notifier_state_handler(const int state)
 	g_debug("idle notifier state handler called, id %d", state);
 
 	if (state == DEVICE_IDLE_STATE_SUSPEND) {
+		g_debug("requesting power status...");
 		odeviced_power_supply_get_power_status(
 			fso_device_idle_notifier_power_state_handler,
 			NULL);
@@ -548,14 +554,19 @@ fso_incoming_ussd_handler(int mode, const char *message)
 void
 fso_network_status_handler(GHashTable *status)
 {
-	char *registration = g_value_get_string(
-			g_hash_table_lookup(status, "registration"));
-	g_debug("fso_network_status_handler(registration=%s)",
-			registration);
-	if (!strcmp(registration, "unregistered")) {
-		g_message("scheduling registration to network");
-		g_timeout_add(gsm_reregister_timeout * 1000,
-				fso_register_network, NULL);
+	GValue *tmp = g_hash_table_lookup(status, "registration");
+	if (tmp) {
+		char *registration = g_value_get_string(tmp);
+		g_debug("fso_network_status_handler(registration=%s)",
+				registration);
+		if (!strcmp(registration, "unregistered")) {
+			g_message("scheduling registration to network");
+			g_timeout_add(gsm_reregister_timeout * 1000,
+					fso_register_network, NULL);
+		}
+	}
+	else {
+		g_debug("got NetworkStatus without registration?!?");
 	}
 }
 
