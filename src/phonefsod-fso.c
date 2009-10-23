@@ -307,10 +307,13 @@ _get_messagebook_info_callback(GError * error, GHashTable * info,
 					PHONEGUI_DIALOG_MESSAGE_STORAGE_FULL);
 		}
 	}
-	else {
+	else if (error) {
 		g_debug("MessageBookInfo failed: %s %s %d", error->message,
 			g_quark_to_string(error->domain), error->code);
 		/* TODO */
+	}
+	else {
+		g_debug("we got neither an error nor the messagebook info?");
 	}
 	g_debug("_get_messagebook_info_callback done");
 }
