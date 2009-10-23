@@ -91,22 +91,6 @@ phonefsod_usage_service_new(void)
 	return g_object_new(PHONEFSOD_TYPE_USAGE_SERVICE, NULL);
 }
 
-void
-phonefsod_usage_service_register_ui_handler(PhonefsodUsageService *object,
-		const char *bus_path, DBusGMethodInvocation *context)
-{
-	GError *error = NULL;
-	g_debug("RegisterUiHandler %s", bus_path);
-	g_setenv("DBUS_SESSION_BUS_ADDRESS", bus_path, TRUE);
-	g_debug("connecting to session bus at %s", g_getenv("DBUS_SESSION_BUS_ADDRESS"));
-	//session_bus = dbus_g_bus_get(DBUS_BUS_SESSION, &error);
-	if (error) {
-		g_debug("failed... %d %s", error->code, error->message);
-	}
-
-	dbus_g_method_return(context);
-}
-
 
 void
 phonefsod_usage_get_resource_state_callback(GError * error, gboolean state,

@@ -43,9 +43,6 @@ struct _PhonefsodUsageServiceClass {
 	DBusGConnection *connection;
 };
 
-void
-phonefsod_usage_service_register_ui_handler(PhonefsodUsageService *object,
-		const char *bus_path, DBusGMethodInvocation *context);
 void phonefsod_usage_service_get_resource_state(PhonefsodUsageService *
 						 object, const char *resource,
 						 DBusGMethodInvocation *
