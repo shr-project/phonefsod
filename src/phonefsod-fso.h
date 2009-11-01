@@ -11,6 +11,8 @@ fso_request_gsm();
 gboolean
 fso_set_antenna_power();
 gboolean
+fso_get_auth_status();
+gboolean
 fso_register_network();
 void
 fso_sim_ready_actions(void);
