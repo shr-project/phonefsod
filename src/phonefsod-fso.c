@@ -187,9 +187,19 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 {
 	g_debug("sim_auth_status_callback(%s,status=%d)", error ? "ERROR" : "OK", status);
 
-	if (error) {
+	/* if no SIM is present inform the user about it and
+	 * stop retrying to authenticate the SIM */
+	if (IS_SIM_ERROR(error, SIM_ERROR_NOT_PRESENT)) {
+		g_message("SIM card not present.");
+		phoneuid_notification_show_dialog(
+			PHONEGUI_DIALOG_SIM_NOT_PRESENT);
+		return;
+	}
+
+	/* on any other error just reschedule a retry */
+	if (error || status == SIM_UNKNOWN) {
 		g_debug("... got error: %s", error->message);
-		g_timeout_add(1000, fso_get_auth_status, NULL);
+		g_timeout_add(5000, fso_get_auth_status, NULL);
 		return;
 	}
 
