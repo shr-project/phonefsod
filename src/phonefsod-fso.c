@@ -401,7 +401,7 @@ fso_resource_changed_handler(const char *name, gboolean state,
 		if (gsm_ready ^ state) {
 			gsm_ready = state;
 			if (gsm_ready) {
-				fso_get_auth_status();
+				fso_set_antenna_power();
 			}
 		}
 	}
