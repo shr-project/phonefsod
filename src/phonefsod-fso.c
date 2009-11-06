@@ -94,7 +94,14 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 	/* if we successfully got a list of resources...
 	 * check if GSM is within them and request it if
 	 * so, otherwise wait for ResourceAvailable signal */
-	if (error == NULL) {
+	g_debug("list_resources_callback()");
+	if (error) {
+		g_message("  error: (%d) %s", error->code, error->message);
+		g_timeout_add(1000, fso_list_resources, NULL);
+		return;
+	}
+
+	if (resources) {
 		int i = 0;
 		while (resources[i] != NULL) {
 			g_debug("Resource %s available", resources[i]);
@@ -105,7 +112,7 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 			i++;
 		}
 
-		if (gsm_available)
+		if (gsm_available) // TODO: airplane mode
 			fso_request_gsm();
 	}
 }
@@ -113,6 +120,7 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 gboolean
 fso_list_resources(void)
 {
+	g_debug("fso_list_resources()");
 	ousaged_list_resources(_list_resources_callback, NULL);
 	return (FALSE);
 }
@@ -163,8 +171,10 @@ _sim_ready_status_callback(GError * error, gboolean status, gpointer userdata)
 	}
 
 	/* if sim is already ready (by the ReadyStatus signal) - nothing to do */
-	if (sim_ready)
+	if (sim_ready) {
+		g_debug("SIM was already ready... nothing to do");
 		return;
+	}
 
 	g_debug("_sim_ready_status_callback(status=%d)", status);
 	if (status)
@@ -174,22 +184,31 @@ _sim_ready_status_callback(GError * error, gboolean status, gpointer userdata)
 static void
 _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 {
-	g_debug("sim_auth_status_callback()");
+	g_debug("sim_auth_status_callback(%s,status=%d)", error ? "ERROR" : "OK", status);
 
-	g_debug("sim_auth_active: %d", sim_auth_active);
-	if (sim_auth_active) {
-		sim_auth_active = FALSE;
-		phoneuid_notification_hide_sim_auth(status);
-	}
-
-	if (status != SIM_READY) {
-		if (!sim_auth_active) {
-			sim_auth_active = TRUE;
-			phoneuid_notification_show_sim_auth(status);
-		}
+	/* if no SIM is present inform the user about it and
+	 * stop retrying to authenticate the SIM */
+	if (IS_SIM_ERROR(error, SIM_ERROR_NOT_PRESENT)) {
+		g_message("SIM card not present.");
+		phoneuid_notification_show_dialog(
+			PHONEUI_DIALOG_SIM_NOT_PRESENT);
 		return;
 	}
 
+	/* on any other error just reschedule a retry */
+	if (error || status == SIM_UNKNOWN) {
+		g_debug("... got error: %s", error->message);
+		g_timeout_add(5000, fso_get_auth_status, NULL);
+		return;
+	}
+
+	if (status != SIM_READY) {
+		g_debug("... needs authentication");
+		phoneuid_notification_show_sim_auth(status);
+		return;
+	}
+
+	g_debug("SIM authenticated");
 	fso_set_antenna_power();
 	ogsmd_sim_get_sim_ready(_sim_ready_status_callback, NULL);
 }
@@ -204,17 +223,13 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 			 * This auth status query is needed for startup when
 			 * there's no auth status signal emitted
 			 */
-			if (!sim_auth_active) {
-				g_debug("getting SIM auth status...");
-				ogsmd_sim_get_auth_status
-					(_sim_auth_status_callback, NULL);
-			}
+			fso_get_auth_status();
 			return;
 		}
 		else if (IS_SIM_ERROR(error, SIM_ERROR_NOT_PRESENT)) {
 			g_message("SIM card not present.");
 			phoneuid_notification_show_dialog(
-				PHONEGUI_DIALOG_SIM_NOT_PRESENT);
+				PHONEUI_DIALOG_SIM_NOT_PRESENT);
 			return;
 		}
 		else if (IS_RESOURCE_ERROR(error, RESOURCE_ERROR_NOT_ENABLED)) {
@@ -251,6 +266,13 @@ fso_set_antenna_power()
 	return (FALSE);
 }
 
+gboolean
+fso_get_auth_status()
+{
+	g_debug("getting SIM auth status...");
+	ogsmd_sim_get_auth_status(_sim_auth_status_callback, NULL);
+	return (FALSE);
+}
 
 static void
 _register_to_network_callback(GError * error, gpointer userdata)
@@ -275,7 +297,7 @@ _register_to_network_callback(GError * error, gpointer userdata)
 }
 
 gboolean
-fso_register_network(void)
+fso_register_network(gpointer *data)
 {
 	ogsmd_network_register(_register_to_network_callback, NULL);
 	return (FALSE);
@@ -312,13 +334,16 @@ _get_messagebook_info_callback(GError * error, GHashTable * info,
 		g_debug("messagebook info: first: %d, last %d, used: %d, total %d", first, last, used, total);
 		if (used == total) {
 			phoneuid_notification_show_dialog(
-					PHONEGUI_DIALOG_MESSAGE_STORAGE_FULL);
+					PHONEUI_DIALOG_MESSAGE_STORAGE_FULL);
 		}
 	}
-	else {
+	else if (error) {
 		g_debug("MessageBookInfo failed: %s %s %d", error->message,
 			g_quark_to_string(error->domain), error->code);
 		/* TODO */
+	}
+	else {
+		g_debug("we got neither an error nor the messagebook info?");
 	}
 	g_debug("_get_messagebook_info_callback done");
 }
@@ -375,13 +400,7 @@ fso_resource_changed_handler(const char *name, gboolean state,
 		if (gsm_ready ^ state) {
 			gsm_ready = state;
 			if (gsm_ready) {
-				/* TODO: remove this workaround when fsousaged
-				 * sends the signal when the GSM resource
-				 * actually is really ready - until then give
-				 * it some time to get it ready ... */
 				fso_set_antenna_power();
-				ogsmd_sim_get_sim_ready
-					(_sim_ready_status_callback, NULL);
 			}
 		}
 	}
@@ -413,6 +432,7 @@ fso_device_idle_notifier_state_handler(const int state)
 	g_debug("idle notifier state handler called, id %d", state);
 
 	if (state == DEVICE_IDLE_STATE_SUSPEND) {
+		g_debug("requesting power status...");
 		odeviced_power_supply_get_power_status(
 			fso_device_idle_notifier_power_state_handler,
 			NULL);
@@ -505,22 +525,10 @@ fso_call_status_handler(const int call_id, const int status,
 void
 fso_sim_auth_status_handler(const int status)
 {
-	g_debug("fso_sim_auth_status_handler()");
+	g_debug("fso_sim_auth_status_handler(status=%d)", status);
 	if (status == SIM_READY) {
 		g_debug("sim auth ready");
-
-		if (sim_auth_active) {
-			sim_auth_active = FALSE;
-			phoneuid_notification_hide_sim_auth(status);
-		}
 		fso_set_antenna_power();
-	}
-	else {
-		g_debug("sim not ready");
-		if (!sim_auth_active) {
-			sim_auth_active = TRUE;
-			phoneuid_notification_show_sim_auth(status);
-		}
 	}
 }
 
@@ -570,14 +578,23 @@ fso_incoming_ussd_handler(int mode, const char *message)
 void
 fso_network_status_handler(GHashTable *status)
 {
-	char *registration = g_value_get_string(
-			g_hash_table_lookup(status, "registration"));
-	g_debug("fso_network_status_handler(registration=%s)",
-			registration);
-	if (!strcmp(registration, "unregistered")) {
-		g_message("scheduling registration to network");
-		g_timeout_add(gsm_reregister_timeout * 1000,
-				fso_register_network, NULL);
+	if (!status) {
+		g_debug("got no status from NetworkStatus?!");
+		return;
+	}
+	GValue *tmp = g_hash_table_lookup(status, "registration");
+	if (tmp) {
+		const char *registration = g_value_get_string(tmp);
+		g_debug("fso_network_status_handler(registration=%s)",
+				registration);
+		if (!strcmp(registration, "unregistered")) {
+			g_message("scheduling registration to network");
+			g_timeout_add(gsm_reregister_timeout * 1000,
+					fso_register_network, NULL);
+		}
+	}
+	else {
+		g_debug("got NetworkStatus without registration?!?");
 	}
 }
 
