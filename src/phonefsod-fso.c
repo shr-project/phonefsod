@@ -17,7 +17,7 @@
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-idlenotifier.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-powersupply.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-audio.h>
-#include <libphone-ui/phoneui.h>
+#include <phoneui/phoneui.h>
 #include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
