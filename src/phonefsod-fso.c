@@ -17,7 +17,7 @@
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-idlenotifier.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-powersupply.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-audio.h>
-#include <frameworkd-phonegui/frameworkd-phonegui.h>
+#include <libphone-ui/phoneui.h>
 #include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
@@ -192,7 +192,7 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 	if (IS_SIM_ERROR(error, SIM_ERROR_NOT_PRESENT)) {
 		g_message("SIM card not present.");
 		phoneuid_notification_show_dialog(
-			PHONEGUI_DIALOG_SIM_NOT_PRESENT);
+			PHONEUI_DIALOG_SIM_NOT_PRESENT);
 		return;
 	}
 
@@ -230,7 +230,7 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 		else if (IS_SIM_ERROR(error, SIM_ERROR_NOT_PRESENT)) {
 			g_message("SIM card not present.");
 			phoneuid_notification_show_dialog(
-				PHONEGUI_DIALOG_SIM_NOT_PRESENT);
+				PHONEUI_DIALOG_SIM_NOT_PRESENT);
 			return;
 		}
 		else if (IS_RESOURCE_ERROR(error, RESOURCE_ERROR_NOT_ENABLED)) {
@@ -335,7 +335,7 @@ _get_messagebook_info_callback(GError * error, GHashTable * info,
 		g_debug("messagebook info: first: %d, last %d, used: %d, total %d", first, last, used, total);
 		if (used == total) {
 			phoneuid_notification_show_dialog(
-					PHONEGUI_DIALOG_MESSAGE_STORAGE_FULL);
+					PHONEUI_DIALOG_MESSAGE_STORAGE_FULL);
 		}
 	}
 	else if (error) {
