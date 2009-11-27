@@ -210,7 +210,7 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 	}
 
 	g_debug("SIM authenticated");
-	fso_set_antenna_power();
+	fso_register_network(NULL);
 	ogsmd_sim_get_sim_ready(_sim_ready_status_callback, NULL);
 }
 
@@ -255,7 +255,6 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 			return;
 		}
 	}
-	fso_register_network();
 }
 
 static void
@@ -536,7 +535,7 @@ fso_sim_auth_status_handler(const int status)
 	g_debug("fso_sim_auth_status_handler(status=%d)", status);
 	if (status == SIM_READY) {
 		g_debug("sim auth ready");
-		fso_set_antenna_power();
+		fso_register_network(NULL);
 	}
 }
 
