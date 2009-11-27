@@ -38,5 +38,6 @@ AC_SUBST(GLIB_GENMARSHAL)
 AC_OUTPUT([
 Makefile
 src/Makefile
+data/Makefile
 ])
 
