@@ -258,12 +258,19 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 	fso_register_network();
 }
 
+static void
+_get_antenna_power_callback(GError *error, gboolean power, gpointer userdata)
+{
+	if (!power) {
+		g_debug("call ogsmd_device_set_antenna_power()");
+		ogsmd_device_set_antenna_power(TRUE, _set_antenna_power_callback, NULL);
+	}
+}
 
 gboolean
 fso_set_antenna_power()
 {
-	g_debug("call ogsmd_device_set_antenna_power()");
-	ogsmd_device_set_antenna_power(TRUE, _set_antenna_power_callback, NULL);
+	ogsmd_device_get_antenna_power(_get_antenna_power_callback, NULL);
 	return (FALSE);
 }
 
