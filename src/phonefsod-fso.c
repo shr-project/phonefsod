@@ -17,6 +17,7 @@
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-idlenotifier.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-powersupply.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-audio.h>
+#include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-display.h>
 #include <phoneui/phoneui.h>
 #include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
@@ -37,6 +38,7 @@ static int incoming_calls_size = 0;
 static int outgoing_calls_size = 0;
 
 
+static int reference_brightness = -1;
 
 /* --- call management --- */
 
@@ -86,6 +88,16 @@ _call_remove(call_t ** calls, int *size, int id)
 	}
 }
 
+/* --- initial startup func --- */
+gboolean
+fso_startup()
+{
+	fso_list_resources();
+	reference_brightness = default_brightness;
+	odeviced_display_set_brightness(reference_brightness,
+			NULL, NULL);
+	return FALSE;
+}
 
 /* --- stuff happening before we have GSM resource up and running  --- */
 
@@ -304,7 +316,7 @@ _register_to_network_callback(GError * error, gpointer userdata)
 }
 
 gboolean
-fso_register_network(gpointer *data)
+fso_register_network(gpointer data)
 {
 	ogsmd_network_register(_register_to_network_callback, NULL);
 	return (FALSE);
@@ -422,27 +434,106 @@ fso_device_idle_notifier_power_state_handler(GError * error,
 						    gpointer userdata)
 {
 	g_debug("power status: %d", status);
-	if (incoming_calls_size == 0 && outgoing_calls_size == 0
-	    && error == NULL && status != DEVICE_POWER_STATE_CHARGING
-	    && status != DEVICE_POWER_STATE_FULL) {
+	//if (incoming_calls_size == 0 && outgoing_calls_size == 0
+	//    && error == NULL && status != DEVICE_POWER_STATE_CHARGING
+	//    && status != DEVICE_POWER_STATE_FULL) {
 
-		ousaged_suspend(NULL, NULL);
-		g_debug("Suspend !");
-	}
+	//	ousaged_suspend(NULL, NULL);
+	//	g_debug("Suspend !");
+	//}
 }
 
 /* --- idle state --- */
+
+static void
+_dimit(int percent)
+{
+	/* -1 means dimming disabled */
+	if (percent < 0)
+		return;
+
+	int b = reference_brightness * percent / 100;
+	if (b > 100) {
+		b = 100;
+	}
+	else if (b < minimum_brightness) {
+		b = 0;
+	}
+
+	g_debug("_dimit: reference = %d; percent = %d; b = %d", reference_brightness, percent, b);
+
+	odeviced_display_set_backlight(b, NULL, NULL);
+	odeviced_display_set_brightness(b, NULL, NULL);
+}
+
+static void
+_get_brightness_handler(GError *error, int brightness, gpointer userdata)
+{
+	reference_brightness = brightness;
+	_dimit(dim_idle_percent);
+}
+
+static void
+_suspend_power_check(GError *error, int status, gpointer userdata)
+{
+	if (error == NULL && (status == DEVICE_POWER_STATE_FULL ||
+				status == DEVICE_POWER_STATE_CHARGING)) {
+		g_debug("not suspending due to charging or battery full");
+		return;
+	}
+	ousaged_suspend(NULL, NULL);
+}
+
+static void
+_handle_suspend(void)
+{
+	if (auto_suspend == SUSPEND_NEVER ||
+			incoming_calls_size > 0 ||
+			outgoing_calls_size > 0)
+		return;
+
+	/* for normal suspend behaviour we have to check
+	 * if power is plugged in */
+	if (auto_suspend == SUSPEND_NORMAL) {
+		odeviced_power_supply_get_power_status
+			(_suspend_power_check, NULL);
+		return;
+	}
+
+	ousaged_suspend(NULL, NULL);
+}
 
 void
 fso_device_idle_notifier_state_handler(const int state)
 {
 	g_debug("idle notifier state handler called, id %d", state);
 
-	if (state == DEVICE_IDLE_STATE_SUSPEND) {
-		g_debug("requesting power status...");
-		odeviced_power_supply_get_power_status(
-			fso_device_idle_notifier_power_state_handler,
-			NULL);
+	switch (state) {
+	case DEVICE_IDLE_STATE_BUSY:
+		g_debug("busy state -> setting backlight to %d", reference_brightness);
+		odeviced_display_set_backlight(TRUE, NULL, NULL);
+		odeviced_display_set_brightness(reference_brightness,
+					NULL, NULL);
+		break;
+	case DEVICE_IDLE_STATE_IDLE:
+		odeviced_display_get_brightness(_get_brightness_handler, NULL);
+		break;
+	case DEVICE_IDLE_STATE_IDLE_DIM:
+		_dimit(dim_idle_dim_percent);
+		break;
+	case DEVICE_IDLE_STATE_PRELOCK:
+		_dimit(dim_idle_prelock_percent);
+		break;
+	case DEVICE_IDLE_STATE_LOCK:
+		if (idle_screen & IDLE_SCREEN_LOCK &&
+				(!(idle_screen & IDLE_SCREEN_PHONE) ||
+				 (incoming_calls_size == 0 && outgoing_calls_size == 0))) {
+		       phoneuid_idle_screen_show();
+		}
+		break;
+	case DEVICE_IDLE_STATE_SUSPEND:
+		_handle_suspend();
+		break;
 	}
 }
 

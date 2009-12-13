@@ -2,6 +2,8 @@
 #define _PHONEFSOD_FSO_H
 
 
+gboolean
+fso_startup();
 
 /* GSM resource handling */
 gboolean

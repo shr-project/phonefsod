@@ -192,3 +192,21 @@ phoneuid_notification_show_ussd(int mode, const char *message)
 }
 
 
+/* org.shr.phoneui.IdleScreen */
+
+void
+phoneuid_idle_screen_show()
+{
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_IDLE_SCREEN_NAME,
+			PHONEUID_IDLE_SCREEN_PATH,
+			PHONEUID_IDLE_SCREEN_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "Display", &error,
+				G_TYPE_INVALID, G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
+}
+

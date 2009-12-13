@@ -20,6 +20,7 @@
 #define PHONEUID_CONTACTS_NAME               PHONEUID_SERVICE ".Contacts"
 #define PHONEUID_MESSAGES_NAME               PHONEUID_SERVICE ".Messages"
 #define PHONEUID_PHONE_LOG_NAME              PHONEUID_SERVICE ".PhoneLog"
+#define PHONEUID_IDLE_SCREEN_NAME            PHONEUID_SERVICE ".IdleScreen"
 
 #define PHONEUID_CALL_MANAGEMENT_INTERFACE   PHONEUID_SERVICE ".CallManagement"
 #define PHONEUID_DIALER_INTERFACE            PHONEUID_SERVICE ".Dialer"
@@ -27,6 +28,7 @@
 #define PHONEUID_CONTACTS_INTERFACE          PHONEUID_SERVICE ".Contacts"
 #define PHONEUID_MESSAGES_INTERFACE          PHONEUID_SERVICE ".Messages"
 #define PHONEUID_PHONE_LOG_INTERFACE         PHONEUID_SERVICE ".PhoneLog"
+#define PHONEUID_IDLE_SCREEN_INTERFACE       PHONEUID_SERVICE ".IdleScreen"
 
 #define PHONEUID_CALL_MANAGEMENT_PATH        PHONEUID_PATH "/CallManagement"
 #define PHONEUID_DIALER_PATH                 PHONEUID_PATH "/Dialer"
@@ -34,5 +36,6 @@
 #define PHONEUID_CONTACTS_PATH               PHONEUID_PATH "/Contacts"
 #define PHONEUID_MESSAGES_PATH               PHONEUID_PATH "/Messages"
 #define PHONEUID_PHONE_LOG_PATH              PHONEUID_PATH "/PhoneLog"
+#define PHONEUID_IDLE_SCREEN_PATH            PHONEUID_PATH "/IdleScreen"
 
 #endif

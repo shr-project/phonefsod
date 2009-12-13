@@ -28,4 +28,6 @@ phoneuid_dialogs_hide_sim_auth(int status);
 void
 phoneuid_dialogs_show_ussd(int mode, const char *message);
 
+void
+phoneuid_idle_screen_show();
 #endif

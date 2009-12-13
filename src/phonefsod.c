@@ -63,7 +63,12 @@
 
 // FIXME: ugly !!!
 #define LOGFILE "/var/log/phonefsod.log"
+
+/* defines for config defaults */
 #define MINIMUM_GSM_REREGISTER_TIMEOUT 60
+#define DEFAULT_GSM_REREGISTER_TIMEOUT 200
+#define DEFAULT_DEFAULT_BRIGHTNESS 100
+#define DEFAULT_MINIMUM_BRIGHTNESS 10
 
 /* global variable used to indicate that
  * program exit is desired 1=run, 0=exit */
@@ -130,16 +135,123 @@ _load_config()
 	    (keyfile, PHONEFSOD_CONFIG, flags, &error)) {
 		show_incoming_sms =
 			g_key_file_get_boolean(keyfile, "phonefsod",
-				       "show_incoming_sms", NULL);
+				       "show_incoming_sms", &error);
+		if (error) {
+			show_incoming_sms = TRUE;
+			g_error_free(error);
+			error = NULL;
+		}
+
 		gsm_reregister_timeout =
 			g_key_file_get_integer(keyfile, "phonefsod",
-					"reregister_timeout", NULL);
+					"reregister_timeout", &error);
+		if (error) {
+			gsm_reregister_timeout = DEFAULT_GSM_REREGISTER_TIMEOUT;
+			g_error_free(error);
+			error = NULL;
+		}
 		/* ensure a sane value for the timeout... minimum is 60s */
-		if (gsm_reregister_timeout < MINIMUM_GSM_REREGISTER_TIMEOUT) {
+		else if (gsm_reregister_timeout < MINIMUM_GSM_REREGISTER_TIMEOUT) {
 			g_message("invalid reregister_timeout - setting to %ds",
 					MINIMUM_GSM_REREGISTER_TIMEOUT);
 			gsm_reregister_timeout = MINIMUM_GSM_REREGISTER_TIMEOUT;
 		}
+
+		default_brightness =
+			g_key_file_get_integer(keyfile, "idle",
+					"default_brightness", &error);
+		if (error) {
+			default_brightness = DEFAULT_DEFAULT_BRIGHTNESS;
+			g_error_free(error);
+			error = NULL;
+		}
+
+		minimum_brightness =
+			g_key_file_get_integer(keyfile, "idle",
+					"minimum_brightness", &error);
+		if (error) {
+			minimum_brightness = DEFAULT_MINIMUM_BRIGHTNESS;
+			g_error_free(error);
+			error = NULL;
+		}
+
+		dim_idle_percent =
+			g_key_file_get_integer(keyfile, "idle",
+					"dim_idle_percent", &error);
+		if (error) {
+			dim_idle_percent = -1;
+			g_error_free(error);
+			error = NULL;
+		}
+
+		dim_idle_dim_percent =
+			g_key_file_get_integer(keyfile, "idle",
+					"dim_idle_dim_percent", &error);
+		if (error) {
+			dim_idle_dim_percent = -1;
+			g_error_free(error);
+			error = NULL;
+		}
+
+		dim_idle_prelock_percent =
+			g_key_file_get_integer(keyfile, "idle",
+					"dim_idle_prelock_percent", &error);
+		if (error) {
+			dim_idle_prelock_percent = -1;
+			g_error_free(error);
+			error = NULL;
+		}
+
+
+		char *s = g_key_file_get_string(keyfile, "idle",
+					"idle_screen", &error);
+		if (error) {
+			g_debug("no idle_screen found in config - defaulting to lock,aux");
+			idle_screen = IDLE_SCREEN_LOCK | IDLE_SCREEN_AUX;
+			g_error_free(error);
+			error = NULL;
+		}
+		else {
+			int i;
+			gchar **flags = g_strsplit(s, ",", 0);
+			idle_screen = IDLE_SCREEN_NEVER;
+			for (i = 0; flags[i]; i++) {
+				if (strcmp(flags[i], "lock") == 0) {
+					g_debug("adding LOCK to idle_screen");
+					idle_screen |= IDLE_SCREEN_LOCK;
+				}
+				else if (strcmp(flags[i], "aux") == 0) {
+					g_debug("adding AUX to idle_scren");
+					idle_screen |= IDLE_SCREEN_AUX;
+				}
+				else if (strcmp(flags[i], "phone") == 0) {
+					g_debug("adding PHONE to idle_screen");
+					idle_screen |= IDLE_SCREEN_PHONE;
+				}
+			}
+			g_strfreev(flags);
+			free(s);
+		}
+
+		s = g_key_file_get_string(keyfile, "idle",
+				"auto_suspend", &error);
+		if (error) {
+			auto_suspend = SUSPEND_NORMAL;
+			g_error_free(error);
+			error = NULL;
+		}
+		else if (strcmp(s, "never") == 0) {
+			auto_suspend = SUSPEND_NEVER;
+		}
+		else if (strcmp(s, "always") == 0) {
+			auto_suspend = SUSPEND_ALWAYS;
+		}
+		else {
+			auto_suspend = SUSPEND_NORMAL;
+		}
+		if (s)
+			free(s);
+
 		g_debug("Configuration file read");
 	}
 	else {
@@ -536,8 +648,8 @@ extern int main (int argc, char *argv[])
 	//fwHandler->simIncomingStoredMessage =
 	//	fso_sim_incoming_stored_message_handler;
 	fwHandler->callCallStatus = fso_call_status_handler;
-	//fwHandler->deviceIdleNotifierState =
-	//	fso_device_idle_notifier_state_handler;
+	fwHandler->deviceIdleNotifierState =
+		fso_device_idle_notifier_state_handler;
 	fwHandler->incomingUssd = fso_incoming_ussd_handler;
 
 	fwHandler->usageResourceAvailable =
@@ -555,7 +667,7 @@ extern int main (int argc, char *argv[])
 
 	/* Start glib main loop and run list_resources() */
 	g_debug("entering glib main loop");
-	g_timeout_add(0, fso_list_resources, NULL);
+	g_timeout_add(0, fso_startup, NULL);
 	g_main_loop_run(main_loop);
 
 	/* Cleanup and exit */
