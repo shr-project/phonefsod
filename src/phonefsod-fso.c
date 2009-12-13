@@ -463,7 +463,13 @@ _dimit(int percent)
 	g_debug("_dimit: reference = %d; percent = %d; b = %d", reference_brightness, percent, b);
 
 	odeviced_display_set_backlight(b, NULL, NULL);
-	odeviced_display_set_brightness(b, NULL, NULL);
+	//odeviced_display_set_brightness(b, NULL, NULL);
+	if (b == 0) {
+		phoneuid_idle_screen_activate_screensaver();
+	}
+	else {
+		phoneuid_idle_screen_deactivate_screensaver();
+	}
 }
 
 static void
