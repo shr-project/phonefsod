@@ -30,4 +30,8 @@ phoneuid_dialogs_show_ussd(int mode, const char *message);
 
 void
 phoneuid_idle_screen_show();
+void
+phoneuid_idle_screen_activate_screensaver();
+void
+phoneuid_idle_screen_deactivate_screensaver();
 #endif

@@ -210,3 +210,35 @@ phoneuid_idle_screen_show()
 	}
 }
 
+void
+phoneuid_idle_screen_activate_screensaver()
+{
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_IDLE_SCREEN_NAME,
+			PHONEUID_IDLE_SCREEN_PATH,
+			PHONEUID_IDLE_SCREEN_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "ActivateScreensaver", &error,
+				G_TYPE_INVALID, G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
+}
+
+void
+phoneuid_idle_screen_deactivate_screensaver()
+{
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_IDLE_SCREEN_NAME,
+			PHONEUID_IDLE_SCREEN_PATH,
+			PHONEUID_IDLE_SCREEN_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "DeactivateScreensaver", &error,
+				G_TYPE_INVALID, G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
+}
+
