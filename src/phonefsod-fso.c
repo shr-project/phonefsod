@@ -18,6 +18,7 @@
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-powersupply.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-audio.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-display.h>
+#include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-input.h>
 #include <phoneui/phoneui.h>
 #include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
@@ -544,6 +545,18 @@ fso_device_idle_notifier_state_handler(const int state)
 		break;
 	}
 	previous_idle_state = state;
+}
+
+/* --- InputEvent --- */
+void
+fso_device_input_event_handler(int source, int action, int duration)
+{
+	g_debug("INPUT EVENT: %d - %d - %d", source, action, duration);
+	if (idle_screen & IDLE_SCREEN_AUX &&
+			source == DEVICE_INPUT_SOURCE_AUX &&
+			action == DEVICE_INPUT_ACTION_RELEASED) {
+		phoneuid_idle_screen_toggle();
+	}
 }
 
 /* --- CallStatus --- */

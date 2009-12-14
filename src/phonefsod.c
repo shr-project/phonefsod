@@ -650,6 +650,7 @@ extern int main (int argc, char *argv[])
 	fwHandler->callCallStatus = fso_call_status_handler;
 	fwHandler->deviceIdleNotifierState =
 		fso_device_idle_notifier_state_handler;
+	fwHandler->deviceInputEvent = fso_device_input_event_handler;
 	fwHandler->incomingUssd = fso_incoming_ussd_handler;
 
 	fwHandler->usageResourceAvailable =

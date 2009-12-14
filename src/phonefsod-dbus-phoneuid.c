@@ -211,6 +211,38 @@ phoneuid_idle_screen_show()
 }
 
 void
+phoneuid_idle_screen_hide()
+{
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_IDLE_SCREEN_NAME,
+			PHONEUID_IDLE_SCREEN_PATH,
+			PHONEUID_IDLE_SCREEN_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "Hide", &error,
+				G_TYPE_INVALID, G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
+}
+
+void
+phoneuid_idle_screen_toggle()
+{
+	DBusGProxy *proxy = _dbus_get_proxy
+			(PHONEUID_IDLE_SCREEN_NAME,
+			PHONEUID_IDLE_SCREEN_PATH,
+			PHONEUID_IDLE_SCREEN_INTERFACE);
+	if (proxy) {
+		GError *error = NULL;
+		dbus_g_proxy_call(proxy, "Toggle", &error,
+				G_TYPE_INVALID, G_TYPE_INVALID);
+		if (error)
+			_dbus_error(error);
+	}
+}
+
+void
 phoneuid_idle_screen_activate_screensaver()
 {
 	DBusGProxy *proxy = _dbus_get_proxy
