@@ -516,10 +516,7 @@ fso_device_idle_notifier_state_handler(const int state)
 
 	switch (state) {
 	case DEVICE_IDLE_STATE_BUSY:
-		g_debug("busy state -> setting backlight to %d", reference_brightness);
-		odeviced_display_set_backlight(TRUE, NULL, NULL);
-		odeviced_display_set_brightness(reference_brightness,
-					NULL, NULL);
+		_dimit(100);
 		break;
 	case DEVICE_IDLE_STATE_IDLE:
 		odeviced_display_get_brightness(_get_brightness_handler, NULL);
