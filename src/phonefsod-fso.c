@@ -462,8 +462,8 @@ _dimit(int percent)
 
 	g_debug("_dimit: reference = %d; percent = %d; b = %d", reference_brightness, percent, b);
 
-	odeviced_display_set_backlight(b, NULL, NULL);
-	//odeviced_display_set_brightness(b, NULL, NULL);
+	//odeviced_display_set_backlight(b, NULL, NULL);
+	odeviced_display_set_brightness(b, NULL, NULL);
 	if (b == 0) {
 		phoneuid_idle_screen_activate_screensaver();
 	}
@@ -512,14 +512,19 @@ _handle_suspend(void)
 void
 fso_device_idle_notifier_state_handler(const int state)
 {
-	g_debug("idle notifier state handler called, id %d", state);
+	static int previous_idle_state = 0;
 
 	switch (state) {
 	case DEVICE_IDLE_STATE_BUSY:
 		_dimit(100);
 		break;
 	case DEVICE_IDLE_STATE_IDLE:
-		odeviced_display_get_brightness(_get_brightness_handler, NULL);
+		if (previous_idle_state == DEVICE_IDLE_STATE_BUSY) {
+			odeviced_display_get_brightness(_get_brightness_handler, NULL);
+		}
+		else {
+			_dimit(dim_idle_percent);
+		}
 		break;
 	case DEVICE_IDLE_STATE_IDLE_DIM:
 		_dimit(dim_idle_dim_percent);
@@ -538,6 +543,7 @@ fso_device_idle_notifier_state_handler(const int state)
 		_handle_suspend();
 		break;
 	}
+	previous_idle_state = state;
 }
 
 /* --- CallStatus --- */
@@ -578,6 +584,7 @@ fso_call_status_handler(const int call_id, const int status,
 					&incoming_calls_size, call_id) == -1) {
 				_call_add(&incoming_calls,
 					&incoming_calls_size, call_id);
+				_dimit(100);
 				phoneuid_call_management_show_incoming(
 						call_id, status, number);
 			}
