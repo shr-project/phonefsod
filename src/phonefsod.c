@@ -520,15 +520,8 @@ static gint _daemonize (gchar *pidfilename)
 		exit(EXIT_ERROR);
 	}
 
-	/* Create the PID File to show we are active */
-	if (gd_b_force) {
-		pidfile = g_open(pidfilename, O_WRONLY|O_CREAT|O_TRUNC,
-				S_IRUSR |S_IWUSR|S_IRGRP|S_IROTH);
-	}
-	else {
-		pidfile = g_open(pidfilename, O_WRONLY|O_CREAT|O_EXCL,
-				S_IRUSR |S_IWUSR|S_IRGRP|S_IROTH);
-	}
+	pidfile = g_open(pidfilename, O_WRONLY|O_CREAT|O_TRUNC,
+			S_IRUSR |S_IWUSR|S_IRGRP|S_IROTH);
 	if (pidfile == -1) {
 		g_warning("Child Error: cannot open pidfile %s: %s",
 				pidfilename, strerror(errno));
