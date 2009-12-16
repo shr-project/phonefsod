@@ -616,6 +616,7 @@ fso_call_status_handler(const int call_id, const int status,
 				_call_add(&incoming_calls,
 					&incoming_calls_size, call_id);
 				_dimit(100);
+				ousaged_request_resource("CPU", NULL, NULL);
 				phoneuid_call_management_show_incoming(
 						call_id, status, number);
 			}
@@ -626,6 +627,7 @@ fso_call_status_handler(const int call_id, const int status,
 					&outgoing_calls_size, call_id) == -1) {
 				_call_add(&outgoing_calls,
 					&outgoing_calls_size, call_id);
+				ousaged_request_resource("CPU", NULL, NULL);
 				phoneuid_call_management_show_outgoing(
 						call_id, status, number);
 			}
@@ -645,6 +647,9 @@ fso_call_status_handler(const int call_id, const int status,
 						&outgoing_calls_size, call_id);
 				phoneuid_call_management_hide_outgoing(
 						call_id);
+			}
+			if (incoming_calls_size == 0 && outgoing_calls_size == 0) {
+				ousaged_release_resource("CPU", NULL, NULL);
 			}
 			break;
 		case CALL_STATUS_HELD:
