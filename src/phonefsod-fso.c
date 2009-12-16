@@ -40,6 +40,10 @@ static int outgoing_calls_size = 0;
 
 
 static int reference_brightness = -1;
+static gboolean display_state = FALSE;
+
+
+static void _dimit(int percent);
 
 /* --- call management --- */
 
@@ -424,6 +428,16 @@ fso_resource_changed_handler(const char *name, gboolean state,
 			}
 		}
 	}
+	else if (strcmp(name, "Display") == 0) {
+		g_debug("Display state state changed: %s", state ? "enabled" : "disabled");
+		display_state = state;
+		/* if something requests the Display resource we have
+		 * to undim it and eventually hide the IdleScreen */
+		if (display_state) {
+			_dimit(100);
+			phoneuid_idle_screen_hide();
+		}
+	}
 }
 
 
@@ -514,6 +528,10 @@ void
 fso_device_idle_notifier_state_handler(const int state)
 {
 	static int previous_idle_state = 0;
+
+	/* while Display resource is requested nothing to do */
+	if (display_state)
+		return;
 
 	switch (state) {
 	case DEVICE_IDLE_STATE_BUSY:
