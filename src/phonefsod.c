@@ -63,6 +63,7 @@
 
 // FIXME: ugly !!!
 #define LOGFILE "/var/log/phonefsod.log"
+#define DEFAULT_DEBUG_LEVEL "INFO"
 
 /* defines for config defaults */
 #define MINIMUM_GSM_REREGISTER_TIMEOUT 60
@@ -95,6 +96,8 @@ static FILE *logfile = NULL;
 /* handle for notification on config changes */
 static int notify;
 
+static GLogLevelFlags log_flags;
+
 /* Local Routines */
 static gpointer _thread_handle_signals(gpointer arg);
 static gint _process_signals(siginfo_t *signal_info);
@@ -109,15 +112,44 @@ static void
 _log_handler(const gchar *domain, GLogLevelFlags level, const gchar *message,
 		gpointer userdata)
 {
+	char *levelstr;
 	char date_str[30];
 	struct timeval tv;
 	struct tm ptime;
+	if (!(log_flags & G_LOG_LEVEL_MASK & level)) {
+		return;
+	}
 	gettimeofday(&tv, NULL);
 	localtime_r(&tv.tv_sec, &ptime);
 
 	strftime(date_str, 30, "%Y.%m.%d %T", &ptime);
 
-	fprintf(logfile, "%s.%06d [%s]\t %s\n", date_str, tv.tv_usec, domain, message);
+	switch (level) {
+	case G_LOG_LEVEL_ERROR:
+		levelstr = "ERROR";
+		break;
+	case G_LOG_LEVEL_CRITICAL:
+		levelstr = "CRITICAL";
+		break;
+	case G_LOG_LEVEL_WARNING:
+		levelstr = "WARNING";
+		break;
+	case G_LOG_LEVEL_MESSAGE:
+		levelstr = "MESSAGE";
+		break;
+	case G_LOG_LEVEL_INFO:
+		levelstr = "INFO";
+		break;
+	case G_LOG_LEVEL_DEBUG:
+		levelstr = "DEBUG";
+		break;
+	default:
+		levelstr = "";
+		break;
+	}
+
+	fprintf(logfile, "%s.%06d [%s]\t%s: %s\n", date_str, (int) tv.tv_usec,
+			domain, levelstr, message);
 	fflush(logfile);
 }
 
@@ -127,23 +159,33 @@ _load_config()
 	GKeyFile *keyfile;
 	GKeyFileFlags flags;
 	GError *error = NULL;
+	char *debug_level = NULL;
+	char *logpath = NULL;
 
 	/* Read the phonefsod preferences */
 	keyfile = g_key_file_new();
 	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
 	if (g_key_file_load_from_file
 	    (keyfile, PHONEFSOD_CONFIG, flags, &error)) {
+
+		/* --- [logging] --- */
+		logpath = g_key_file_get_string(keyfile, "logging",
+					"log_file", NULL);
+		debug_level =
+			g_key_file_get_string(keyfile, "logging",
+					"log_level", NULL);
+
+		/* --- [gsm] --- */
 		show_incoming_sms =
-			g_key_file_get_boolean(keyfile, "phonefsod",
+			g_key_file_get_boolean(keyfile, "gsm",
 				       "show_incoming_sms", &error);
 		if (error) {
 			show_incoming_sms = TRUE;
 			g_error_free(error);
 			error = NULL;
 		}
-
 		gsm_reregister_timeout =
-			g_key_file_get_integer(keyfile, "phonefsod",
+			g_key_file_get_integer(keyfile, "gsm",
 					"reregister_timeout", &error);
 		if (error) {
 			gsm_reregister_timeout = DEFAULT_GSM_REREGISTER_TIMEOUT;
@@ -157,6 +199,7 @@ _load_config()
 			gsm_reregister_timeout = MINIMUM_GSM_REREGISTER_TIMEOUT;
 		}
 
+		/* --- [idle] --- */
 		default_brightness =
 			g_key_file_get_integer(keyfile, "idle",
 					"default_brightness", &error);
@@ -165,7 +208,6 @@ _load_config()
 			g_error_free(error);
 			error = NULL;
 		}
-
 		minimum_brightness =
 			g_key_file_get_integer(keyfile, "idle",
 					"minimum_brightness", &error);
@@ -174,7 +216,6 @@ _load_config()
 			g_error_free(error);
 			error = NULL;
 		}
-
 		dim_idle_percent =
 			g_key_file_get_integer(keyfile, "idle",
 					"dim_idle_percent", &error);
@@ -183,7 +224,6 @@ _load_config()
 			g_error_free(error);
 			error = NULL;
 		}
-
 		dim_idle_dim_percent =
 			g_key_file_get_integer(keyfile, "idle",
 					"dim_idle_dim_percent", &error);
@@ -192,7 +232,6 @@ _load_config()
 			g_error_free(error);
 			error = NULL;
 		}
-
 		dim_idle_prelock_percent =
 			g_key_file_get_integer(keyfile, "idle",
 					"dim_idle_prelock_percent", &error);
@@ -201,8 +240,6 @@ _load_config()
 			g_error_free(error);
 			error = NULL;
 		}
-
-
 		char *s = g_key_file_get_string(keyfile, "idle",
 					"idle_screen", &error);
 		if (error) {
@@ -232,7 +269,6 @@ _load_config()
 			g_strfreev(flags);
 			free(s);
 		}
-
 		s = g_key_file_get_string(keyfile, "idle",
 				"auto_suspend", &error);
 		if (error) {
@@ -255,8 +291,48 @@ _load_config()
 		g_debug("Configuration file read");
 	}
 	else {
-		g_error(error->message);
-		g_debug("Reading configuration file error, skipping");
+		g_warning(error->message);
+		g_error_free(error);
+	}
+
+	debug_level = (debug_level) ? debug_level : DEFAULT_DEBUG_LEVEL;
+	logpath = (logpath) ? logpath : LOGFILE;
+
+	log_flags = G_LOG_FLAG_FATAL;
+	if (!strcmp(debug_level, "DEBUG")) {
+		log_flags |= G_LOG_LEVEL_MASK;
+	}
+	else if (!strcmp(debug_level, "INFO")) {
+		log_flags |= G_LOG_LEVEL_MASK ^ (G_LOG_LEVEL_DEBUG);
+	}
+	else if (!strcmp(debug_level, "MESSAGE")) {
+		log_flags |= G_LOG_LEVEL_MASK ^ (G_LOG_LEVEL_DEBUG
+			| G_LOG_LEVEL_INFO);
+	}
+	else if (!strcmp(debug_level, "WARNING")) {
+		log_flags |= G_LOG_LEVEL_MASK ^ (G_LOG_LEVEL_DEBUG
+			| G_LOG_LEVEL_INFO | G_LOG_LEVEL_MESSAGE);
+	}
+	else if (!strcmp(debug_level, "CRITICAL")) {
+		log_flags |= G_LOG_LEVEL_MASK ^ (G_LOG_LEVEL_DEBUG
+			| G_LOG_LEVEL_INFO | G_LOG_LEVEL_MESSAGE
+			| G_LOG_LEVEL_WARNING);
+	}
+	else if (!strcmp(debug_level, "ERROR")) {
+		log_flags |= G_LOG_LEVEL_MASK ^ (G_LOG_LEVEL_DEBUG
+			| G_LOG_LEVEL_INFO | G_LOG_LEVEL_MESSAGE
+			| G_LOG_LEVEL_WARNING | G_LOG_LEVEL_CRITICAL);
+	}
+	else {
+	}
+
+	/* initialize logging */
+	logfile = fopen(logpath, "a");
+	if (!logfile) {
+		printf("Error creating the logfile (%s) !!!", logpath);
+	}
+	else {
+		g_log_set_default_handler(_log_handler, NULL);
 	}
 }
 
@@ -552,14 +628,6 @@ extern int main (int argc, char *argv[])
 	uid_t     effective_user_id = 0;
 	gint      rc = 0;
 	struct    passwd *userinfo = NULL;
-
-	/* initialize logging */
-	logfile = fopen(LOGFILE, "a");
-	if (!logfile) {
-		printf("Error creating the logfile (%s) !!!", LOGFILE);
-		return (-3);
-	}
-	g_log_set_default_handler(_log_handler, NULL);
 
 	/* initialize threading and mainloop */
 	g_type_init();
