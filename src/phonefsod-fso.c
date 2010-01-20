@@ -19,11 +19,18 @@
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-audio.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-display.h>
 #include <frameworkd-glib/odeviced/frameworkd-glib-odeviced-input.h>
-#include <phoneui/phoneui.h>
+//#include <phoneui/phoneui.h>
 #include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
 
+enum PhoneUiDialogType {
+	PHONEUI_DIALOG_ERROR_DO_NOT_USE = 0,
+	// This value is used for checking if we get a wrong pointer out of a HashTable. 
+	// So do not use it, and leave it first in this enum. ( because 0 == NULL )
+	PHONEUI_DIALOG_MESSAGE_STORAGE_FULL,
+	PHONEUI_DIALOG_SIM_NOT_PRESENT
+};
 
 typedef struct {
 	int id;
