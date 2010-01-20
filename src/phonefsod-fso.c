@@ -137,8 +137,8 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 			i++;
 		}
 
-		if (gsm_available) // TODO: airplane mode
-			fso_request_gsm();
+		if (gsm_available)
+			fso_go_online_offline();
 	}
 }
 
@@ -163,6 +163,11 @@ _request_resource_callback(GError * error, gpointer userdata)
 		return;
 	}
 
+	if (IS_USAGE_ERROR(error, USAGE_ERROR_USER_EXISTS)) {
+		g_message("we already requested GSM!!!");
+		return;
+	}
+
 	/* we only request the GSM resource if it is actually
 	 * available... if this does not work we retry it after
 	 * some timeout ... */
@@ -181,6 +186,32 @@ fso_request_gsm(void)
 		ousaged_request_resource("GSM", _request_resource_callback, NULL);
 	}
 	return (FALSE);
+}
+
+static void
+_going_offline_callback(GError *error, gpointer userdata)
+{
+	g_debug("going offline");
+	ousaged_set_resource_policy("GSM", "disabled", NULL, NULL);
+}
+
+static void
+_going_online_callback(GError *error, gpointer userdata)
+{
+	g_debug("going online");
+	fso_request_gsm();
+}
+
+gboolean
+fso_go_online_offline()
+{
+	g_debug("handling offline mode (%s)", offline_mode ? "OFFLINE" : "ONLINE");
+	if (offline_mode) {
+		ousaged_release_resource("GSM", _going_offline_callback, NULL);
+	}
+	else {
+		ousaged_set_resource_policy("GSM", "auto", _going_online_callback, NULL);
+	}
 }
 
 
@@ -404,10 +435,8 @@ fso_resource_available_handler(const char *name, gboolean availability)
 		availability ? "available" : "vanished");
 	if (strcmp(name, "GSM") == 0) {
 		gsm_available = availability;
-		if (gsm_available) {
-			/* TODO: airplane mode !!! */
-			fso_request_gsm();
-		}
+		if (gsm_available)
+			fso_go_online_offline();
 	}
 }
 
@@ -433,6 +462,10 @@ fso_resource_changed_handler(const char *name, gboolean state,
 			if (gsm_ready) {
 				fso_set_antenna_power();
 			}
+		}
+		else if (!offline_mode && !gsm_ready) {
+			g_debug("GSM not ready... handle offline mode");
+			fso_go_online_offline();
 		}
 	}
 	else if (strcmp(name, "Display") == 0) {

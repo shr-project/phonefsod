@@ -43,6 +43,12 @@ struct _PhonefsodUsageServiceClass {
 	DBusGConnection *connection;
 };
 
+void phonefsod_usage_service_set_offline_mode(PhonefsodUsageService *object,
+		gboolean mode, DBusGMethodInvocation *context);
+
+void phonefsod_usage_service_get_offline_mode(PhonefsodUsageService *object,
+		DBusGMethodInvocation *context);
+
 void phonefsod_usage_service_get_resource_state(PhonefsodUsageService *
 						 object, const char *resource,
 						 DBusGMethodInvocation *

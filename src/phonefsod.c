@@ -176,6 +176,15 @@ _load_config()
 					"log_level", NULL);
 
 		/* --- [gsm] --- */
+		offline_mode =
+			g_key_file_get_boolean(keyfile, "gsm",
+					"offline_mode", &error);
+		if (error) {
+			offline_mode = FALSE;
+			g_error_free(error);
+			error = NULL;
+		}
+
 		show_incoming_sms =
 			g_key_file_get_boolean(keyfile, "gsm",
 				       "show_incoming_sms", &error);

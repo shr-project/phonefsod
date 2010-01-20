@@ -33,6 +33,41 @@ G_DEFINE_TYPE(PhonefsodUsageService, phonefsod_usage_service, G_TYPE_OBJECT)
 
 int resources[OUSAGED_RESOURCE_COUNT];
 
+static void
+_write_offline_mode_to_config(void)
+{
+	GError *error = NULL;
+	GKeyFile *keyfile;
+	GKeyFileFlags flags;
+	gsize size;
+	char *config_data;
+
+	keyfile = g_key_file_new();
+	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+	if (g_key_file_load_from_file
+	    (keyfile, PHONEFSOD_CONFIG, flags, &error)) {
+		g_key_file_set_boolean(keyfile, "gsm",
+				"offline_mode", offline_mode);
+		config_data = g_key_file_to_data(keyfile, &size, NULL);
+		if (!config_data) {
+			g_message("could not convert config data to write \
+					offline mode to config");
+		}
+		else {
+			if (!g_file_set_contents(PHONEFSOD_CONFIG, config_data,
+					size, &error))
+			{
+				g_warning("failed writing offline mode \
+					to config: %s", error->message);
+				g_error_free(error);
+			}
+			g_free(config_data);
+		}
+	}
+
+	if (keyfile)
+		g_key_file_free(keyfile);
+}
 
 static void
 phonefsod_usage_service_class_init(PhonefsodUsageServiceClass * klass)
@@ -91,6 +126,25 @@ phonefsod_usage_service_new(void)
 	return g_object_new(PHONEFSOD_TYPE_USAGE_SERVICE, NULL);
 }
 
+void
+phonefsod_usage_service_set_offline_mode(PhonefsodUsageService *object,
+		gboolean state, DBusGMethodInvocation *context)
+{
+	if (offline_mode ^ state) {
+		offline_mode = state;
+		_write_offline_mode_to_config();
+		fso_go_online_offline();
+	}
+
+	dbus_g_method_return(context);
+}
+
+void
+phonefsod_usage_service_get_offline_mode(PhonefsodUsageService *object,
+		DBusGMethodInvocation *context)
+{
+	dbus_g_method_return(context, offline_mode);
+}
 
 void
 phonefsod_usage_get_resource_state_callback(GError * error, gboolean state,

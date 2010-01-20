@@ -11,6 +11,8 @@ fso_list_resources();
 gboolean
 fso_request_gsm();
 gboolean
+fso_go_online_offline();
+gboolean
 fso_set_antenna_power();
 gboolean
 fso_get_auth_status();

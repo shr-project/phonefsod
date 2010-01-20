@@ -2,8 +2,8 @@
 #ifndef _PHONEFSOD_GLOBALS_H
 #define _PHONEFSOD_GLOBALS_H
 
+gboolean offline_mode;
 gboolean show_incoming_sms;
-
 int gsm_reregister_timeout;
 
 int default_brightness;
