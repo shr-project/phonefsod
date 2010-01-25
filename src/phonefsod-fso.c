@@ -123,7 +123,6 @@ _list_resources_callback(GError *error, char **resources, gpointer userdata)
 	if (error) {
 		g_message("  error: (%d) %s", error->code, error->message);
 		g_timeout_add(1000, fso_list_resources, NULL);
-		g_error_free(error);
 		return;
 	}
 
@@ -166,17 +165,16 @@ _request_resource_callback(GError * error, gpointer userdata)
 
 	if (IS_USAGE_ERROR(error, USAGE_ERROR_USER_EXISTS)) {
 		g_message("we already requested GSM!!!");
+		return;
 	}
-	else {
-		/* we only request the GSM resource if it is actually
-		 * available... if this does not work we retry it after
-		 * some timeout ... */
-		g_debug("request resource error, try again in 1s");
-		g_debug("error: %s %s %d", error->message,
-			g_quark_to_string(error->domain), error->code);
-		g_timeout_add(1000, fso_request_gsm, NULL);
-	}
-	g_error_free(error);
+
+	/* we only request the GSM resource if it is actually
+	 * available... if this does not work we retry it after
+	 * some timeout ... */
+	g_debug("request resource error, try again in 1s");
+	g_debug("error: %s %s %d", error->message,
+		g_quark_to_string(error->domain), error->code);
+	g_timeout_add(1000, fso_request_gsm, NULL);
 }
 
 gboolean
@@ -194,11 +192,6 @@ static void
 _going_offline_callback(GError *error, gpointer userdata)
 {
 	g_debug("going offline");
-	if (error) {
-		g_warning("got an error while releasing GSM: %s", error->message);
-		g_error_free(error);
-	}
-
 	ousaged_set_resource_policy("GSM", "disabled", NULL, NULL);
 }
 
@@ -206,10 +199,6 @@ static void
 _going_online_callback(GError *error, gpointer userdata)
 {
 	g_debug("going online");
-	if (error) {
-		g_warning("got an error while setting GSM policy to auto: %s", error->message);
-		g_error_free(error);
-	}
 	fso_request_gsm();
 }
 
@@ -234,7 +223,6 @@ _sim_ready_status_callback(GError * error, gboolean status, gpointer userdata)
 	if (error) {
 		g_debug("GetSimReady failed: %s %s %d", error->message,
 			g_quark_to_string(error->domain), error->code);
-		g_error_free(error);
 		return;
 	}
 
@@ -260,16 +248,12 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 		g_message("SIM card not present.");
 		phoneuid_notification_show_dialog(
 			PHONEUI_DIALOG_SIM_NOT_PRESENT);
-		g_error_free(error);
 		return;
 	}
 
 	/* on any other error just reschedule a retry */
 	if (error || status == SIM_UNKNOWN) {
-		if (error) {
-			g_debug("... got error: %s", error->message);
-			g_error_free(error);
-		}
+		g_debug("... got error: %s", error->message);
 		g_timeout_add(5000, fso_get_auth_status, NULL);
 		return;
 	}
@@ -296,15 +280,18 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 			 * there's no auth status signal emitted
 			 */
 			fso_get_auth_status();
+			return;
 		}
 		else if (IS_SIM_ERROR(error, SIM_ERROR_NOT_PRESENT)) {
 			g_message("SIM card not present.");
 			phoneuid_notification_show_dialog(
 				PHONEUI_DIALOG_SIM_NOT_PRESENT);
+			return;
 		}
 		else if (IS_RESOURCE_ERROR(error, RESOURCE_ERROR_NOT_ENABLED)) {
 			g_message("GSM is not yet enabled, try again in 1s");
 			g_timeout_add(1000, fso_set_antenna_power, NULL);
+			return;
 		}
 		else if (IS_FRAMEWORKD_GLIB_DBUS_ERROR
 			 (error,
@@ -314,25 +301,20 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 			) {
 			g_debug("dbus not available, try again in 5s");
 			g_timeout_add(5000, fso_set_antenna_power, NULL);
+			return;
 		}
 		else {
 			g_debug("Unknown error: %s %s %d", error->message,
 				g_quark_to_string(error->domain), error->code);
 			g_timeout_add(5000, fso_set_antenna_power, NULL);
+			return;
 		}
-		g_error_free(error);
 	}
 }
 
 static void
 _get_antenna_power_callback(GError *error, gboolean power, gpointer userdata)
 {
-	if (error) {
-		g_warning("querying antenna power failed: %s", error->message);
-		g_error_free(error);
-		return;
-	}
-
 	if (!power) {
 		g_debug("call ogsmd_device_set_antenna_power()");
 		ogsmd_device_set_antenna_power(TRUE, _set_antenna_power_callback, NULL);
@@ -365,7 +347,6 @@ _register_to_network_callback(GError * error, gpointer userdata)
 		g_debug("Registering to network failed: %s %s %d",
 			error->message, g_quark_to_string(error->domain),
 			error->code);
-		g_error_free(error);
 		/* when registering to the network fails we have to retry
 		 * after some time again ... but only as long as GSM is
 		 * enabled */
@@ -421,7 +402,6 @@ _get_messagebook_info_callback(GError * error, GHashTable * info,
 	else if (error) {
 		g_debug("MessageBookInfo failed: %s %s %d", error->message,
 			g_quark_to_string(error->domain), error->code);
-		g_error_free(error);
 		/* TODO */
 	}
 	else {
@@ -509,10 +489,6 @@ fso_device_idle_notifier_power_state_handler(GError * error,
 						    gpointer userdata)
 {
 	g_debug("power status: %d", status);
-	if (error) {
-		g_debug("power state error: %s", error->message);
-		g_error_free(error);
-	}
 	//if (incoming_calls_size == 0 && outgoing_calls_size == 0
 	//    && error == NULL && status != DEVICE_POWER_STATE_CHARGING
 	//    && status != DEVICE_POWER_STATE_FULL) {
@@ -554,11 +530,6 @@ _dimit(int percent)
 static void
 _get_brightness_handler(GError *error, int brightness, gpointer userdata)
 {
-	if (error) {
-		g_warning("failed to get display brightness: %s", error->message);
-		g_error_free(error);
-		return;
-	}
 	reference_brightness = brightness;
 	_dimit(dim_idle_percent);
 }
@@ -570,10 +541,6 @@ _suspend_power_check(GError *error, int status, gpointer userdata)
 				status == DEVICE_POWER_STATE_CHARGING)) {
 		g_debug("not suspending due to charging or battery full");
 		return;
-	}
-	if (error) {
-		g_debug("_suspend_power_check error: %s", error->message);
-		g_error_free(error);
 	}
 	ousaged_suspend(NULL, NULL);
 }
