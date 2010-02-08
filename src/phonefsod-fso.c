@@ -475,7 +475,8 @@ fso_resource_changed_handler(const char *name, gboolean state,
 		 * to undim it and eventually hide the IdleScreen */
 		if (display_state) {
 			_dimit(100);
-			phoneuid_idle_screen_hide();
+			/* Should just not pop, not hide when someone requests display
+			 * phoneuid_idle_screen_hide();/*
 		}
 	}
 }
