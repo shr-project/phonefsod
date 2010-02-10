@@ -17,6 +17,7 @@
  *  GNU Lesser Public License for more details.
  */
 
+#include <stdlib.h>
 #include <glib.h>
 #include <glib/gthread.h>
 #include <dbus/dbus-glib-bindings.h>
@@ -24,6 +25,7 @@
 #include <frameworkd-glib/ousaged/frameworkd-glib-ousaged.h>
 #include "phonefsod-dbus-common.h"
 #include "phonefsod-dbus-usage.h"
+#include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
 #include "phonefsod-usage-service-glue.h"
 
@@ -89,9 +91,6 @@ phonefsod_usage_service_class_init(PhonefsodUsageServiceClass * klass)
 static void
 phonefsod_usage_service_init(PhonefsodUsageService * object)
 {
-	GError *error = NULL;
-	DBusGProxy *driver_proxy;
-	int request_ret;
 	int f;
 
 	for (f = 0; f < OUSAGED_RESOURCE_COUNT; f++)
@@ -104,19 +103,6 @@ phonefsod_usage_service_init(PhonefsodUsageService * object)
 	dbus_g_connection_register_g_object(klass->connection,
 			PHONEFSOD_USAGE_PATH,
 			G_OBJECT (object));
-
-	/* Register the service name, the constant here are defined in dbus-glib-bindings.h */
-	driver_proxy = dbus_g_proxy_new_for_name (klass->connection,
-			DBUS_SERVICE_DBUS,
-			DBUS_PATH_DBUS,
-			DBUS_INTERFACE_DBUS);
-
-	if (!org_freedesktop_DBus_request_name (driver_proxy,
-			PHONEFSOD_USAGE_NAME, 0, &request_ret, &error)) {
-		g_warning("Unable to register service: %s", error->message);
-		g_error_free (error);
-	}
-	g_object_unref(driver_proxy);
 }
 
 

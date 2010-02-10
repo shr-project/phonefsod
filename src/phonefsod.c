@@ -701,16 +701,7 @@ extern int main (int argc, char *argv[])
 
 	_load_config();
 
-	/* setup dbus server part */
-	GError *error = NULL;
-
-	phonefsod_usage_service_new();
-
-	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error);
-	if (error) {
-		g_error("%d: %s", error->code, error->message);
-		g_error_free(error);
-	}
+	phonefsod_dbus_setup();
 
 	/* initialize libframeworkd-glib */
 	FrameworkdHandler *fwHandler = frameworkd_handler_new();

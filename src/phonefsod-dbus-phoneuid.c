@@ -37,7 +37,7 @@ void phoneuid_call_management_show_incoming(int callid, int status,
 		const char *number)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_CALL_MANAGEMENT_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_CALL_MANAGEMENT_PATH,
 			PHONEUID_CALL_MANAGEMENT_INTERFACE);
 	if (proxy) {
@@ -54,7 +54,7 @@ void phoneuid_call_management_show_incoming(int callid, int status,
 void phoneuid_call_management_hide_incoming(int callid)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_CALL_MANAGEMENT_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_CALL_MANAGEMENT_PATH,
 			PHONEUID_CALL_MANAGEMENT_INTERFACE);
 	if (proxy) {
@@ -72,7 +72,7 @@ phoneuid_call_management_show_outgoing(int callid, int status,
 		const char *number)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_CALL_MANAGEMENT_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_CALL_MANAGEMENT_PATH,
 			PHONEUID_CALL_MANAGEMENT_INTERFACE);
 	if (proxy) {
@@ -90,7 +90,7 @@ void
 phoneuid_call_management_hide_outgoing(int callid)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_CALL_MANAGEMENT_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_CALL_MANAGEMENT_PATH,
 			PHONEUID_CALL_MANAGEMENT_INTERFACE);
 	if (proxy) {
@@ -108,7 +108,7 @@ void
 phoneuid_messages_display_message(const char *message_path)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_MESSAGES_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_MESSAGES_PATH,
 			PHONEUID_MESSAGES_INTERFACE);
 	if (proxy) {
@@ -126,7 +126,7 @@ void
 phoneuid_notification_show_dialog(int dialog)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_NOTIFICATION_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_NOTIFICATION_PATH,
 			PHONEUID_NOTIFICATION_INTERFACE);
 	if (proxy) {
@@ -143,7 +143,7 @@ void
 phoneuid_notification_show_sim_auth(int status)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_NOTIFICATION_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_NOTIFICATION_PATH,
 			PHONEUID_NOTIFICATION_INTERFACE);
 	if (proxy) {
@@ -160,7 +160,7 @@ void
 phoneuid_notification_hide_sim_auth(int status)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_NOTIFICATION_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_NOTIFICATION_PATH,
 			PHONEUID_NOTIFICATION_INTERFACE);
 	if (proxy) {
@@ -177,7 +177,7 @@ void
 phoneuid_notification_show_ussd(int mode, const char *message)
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_NOTIFICATION_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_NOTIFICATION_PATH,
 			PHONEUID_NOTIFICATION_INTERFACE);
 	if (proxy) {
@@ -198,7 +198,7 @@ void
 phoneuid_idle_screen_show()
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_IDLE_SCREEN_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_IDLE_SCREEN_PATH,
 			PHONEUID_IDLE_SCREEN_INTERFACE);
 	if (proxy) {
@@ -214,7 +214,7 @@ void
 phoneuid_idle_screen_hide()
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_IDLE_SCREEN_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_IDLE_SCREEN_PATH,
 			PHONEUID_IDLE_SCREEN_INTERFACE);
 	if (proxy) {
@@ -230,7 +230,7 @@ void
 phoneuid_idle_screen_toggle()
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_IDLE_SCREEN_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_IDLE_SCREEN_PATH,
 			PHONEUID_IDLE_SCREEN_INTERFACE);
 	if (proxy) {
@@ -246,7 +246,7 @@ void
 phoneuid_idle_screen_activate_screensaver()
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_IDLE_SCREEN_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_IDLE_SCREEN_PATH,
 			PHONEUID_IDLE_SCREEN_INTERFACE);
 	if (proxy) {
@@ -262,7 +262,7 @@ void
 phoneuid_idle_screen_deactivate_screensaver()
 {
 	DBusGProxy *proxy = _dbus_get_proxy
-			(PHONEUID_IDLE_SCREEN_NAME,
+			(PHONEUID_SERVICE,
 			PHONEUID_IDLE_SCREEN_PATH,
 			PHONEUID_IDLE_SCREEN_INTERFACE);
 	if (proxy) {

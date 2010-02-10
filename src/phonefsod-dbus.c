@@ -32,4 +32,32 @@
 void
 phonefsod_dbus_setup()
 {
+	DBusGConnection *bus;
+	DBusGProxy *driver_proxy;
+	GError *error = NULL;
+	int request_ret;
+
+	g_debug("Setting up dbus server part");
+
+	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error);
+	if (error) {
+		g_error("%d: %s", error->code, error->message);
+		g_error_free(error);
+		return;
+	}
+
+	/* Register the service name, the constant here are defined in dbus-glib-bindings.h */
+	driver_proxy = dbus_g_proxy_new_for_name (system_bus,
+						  DBUS_SERVICE_DBUS,
+						  DBUS_PATH_DBUS,
+						  DBUS_INTERFACE_DBUS);
+
+	if (!org_freedesktop_DBus_request_name (driver_proxy,
+			PHONEFSOD_SERVICE, 0, &request_ret, &error)) {
+		g_warning("Unable to register service: %s", error->message);
+		g_error_free (error);
+	}
+	g_object_unref(driver_proxy);
+
+	phonefsod_usage_service_new();
 }
