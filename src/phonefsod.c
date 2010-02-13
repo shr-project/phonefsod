@@ -410,7 +410,7 @@ static gint _process_signals ( siginfo_t *signal_info)
 	case SIGQUIT:   /* often used to signal an orderly shutdown */
 	case SIGINT:    /* often used to signal an orderly shutdown */
 	case SIGPWR:    /* Power Failure */
-	case SIGKILL:   /* Fatal Exit flag */ 
+	case SIGKILL:   /* Fatal Exit flag */
 	case SIGTERM:   /* Immediately Fatal Exit flag */
 		switch (signal_info->si_code) {
 		case SI_USER:  pch="kill(2) or raise(3)"; break;
@@ -466,7 +466,7 @@ static gpointer  _thread_handle_signals(gpointer main_loop)
 				g_strerror(errno));
 			continue;
 		}
-		/* when we get this far, we've  caught a signal */ 
+		/* when we get this far, we've  caught a signal */
 		rval = _process_signals ( &signal_info );
 		g_atomic_int_set(&gd_flag_exit, rval);
 
@@ -487,7 +487,7 @@ static gpointer  _thread_handle_signals(gpointer main_loop)
  *  _handle_command_line()
  *
  *  Parse out the command line options from argc,argv
- *  gdaemon_glib [-u|--userid name] [-f|--forcepid] [-p|--pidfile fname] 
+ *  gdaemon_glib [-u|--userid name] [-f|--forcepid] [-p|--pidfile fname]
  *               [-d|--debug XX]  [-v|--version] [-h|--help]
  *
  *  Returns: TRUE if all params where handled
@@ -554,7 +554,7 @@ static gint _handle_command_line(int argc, char **argv,
  *
  *  Returns:
  *      returns integer which is passed back to the parent process
- *      values - EXIT_FAILURE Parent and 1st Child 
+ *      values - EXIT_FAILURE Parent and 1st Child
  *             - EXIT_ERROR   AnyPid or error
  *             - EXIT_SUCCESS Only the Daemon or GrandChild
 */
