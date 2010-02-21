@@ -594,8 +594,9 @@ fso_device_idle_notifier_state_handler(const int state)
 		break;
 	case DEVICE_IDLE_STATE_LOCK:
 		if (idle_screen & IDLE_SCREEN_LOCK &&
-				(!(idle_screen & IDLE_SCREEN_PHONE) ||
-				 (incoming_calls_size == 0 && outgoing_calls_size == 0))) {
+				((idle_screen & IDLE_SCREEN_PHONE) ||
+				 ((incoming_calls_size == 0) &&
+				 (outgoing_calls_size == 0)))) {
 		       phoneuid_idle_screen_show();
 		}
 		break;
