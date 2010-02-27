@@ -531,7 +531,9 @@ _dimit(int percent)
 static void
 _get_brightness_handler(GError *error, int brightness, gpointer userdata)
 {
-	reference_brightness = brightness;
+	if (!error) {
+		reference_brightness = brightness;
+	}
 	_dimit(dim_idle_percent);
 }
 
