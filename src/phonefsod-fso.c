@@ -26,7 +26,7 @@
 
 enum PhoneUiDialogType {
 	PHONEUI_DIALOG_ERROR_DO_NOT_USE = 0,
-	// This value is used for checking if we get a wrong pointer out of a HashTable. 
+	// This value is used for checking if we get a wrong pointer out of a HashTable.
 	// So do not use it, and leave it first in this enum. ( because 0 == NULL )
 	PHONEUI_DIALOG_MESSAGE_STORAGE_FULL,
 	PHONEUI_DIALOG_SIM_NOT_PRESENT
@@ -38,6 +38,7 @@ typedef struct {
 
 static gboolean sim_auth_active = FALSE;
 static gboolean sim_ready = FALSE;
+static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
 static gboolean gsm_ready = FALSE;
 static call_t *incoming_calls = NULL;
@@ -152,6 +153,7 @@ _request_resource_callback(GError * error, gpointer userdata)
 {
 	g_debug("_request_resource_callback()");
 
+	gsm_request_running = FALSE;
 	if (error == NULL) {
 		/* nothing to do when there is no error
 		 * the signal handler for ResourceChanged
@@ -176,10 +178,18 @@ _request_resource_callback(GError * error, gpointer userdata)
 gboolean
 fso_request_gsm(void)
 {
-	/* only request GSM if we know it is available */
-	if (gsm_available) {
+	if (gsm_request_running) {
+		/* do not request GSM twice */
+		g_warning("GSM request still running...");
+	}
+	else if (gsm_available) {
+		/* only request GSM if we know it is available */
 		g_debug("Request GSM resource");
+		gsm_request_running = TRUE;
 		ousaged_request_resource("GSM", _request_resource_callback, NULL);
+	}
+	else {
+		g_warning("Not requesting GSM as it is not available");
 	}
 	return (FALSE);
 }
@@ -266,6 +276,18 @@ _sim_auth_status_callback(GError * error, int status, gpointer userdata)
 }
 
 static void
+_set_functionality_callback(GError *error, gpointer userdata)
+{
+	(void) userdata;
+
+	if (error) {
+		g_warning("SetFunctionality gave an error: %s", error->message);
+		return;
+	}
+	fso_register_network();
+}
+
+static void
 _set_antenna_power_callback(GError * error, gpointer userdata)
 {
 	g_debug("_set_antenna_power_callback()");
@@ -283,6 +305,12 @@ _set_antenna_power_callback(GError * error, gpointer userdata)
 			phoneuid_notification_show_dialog(
 				PHONEUI_DIALOG_SIM_NOT_PRESENT);
 			return;
+		}
+		else if (IS_DEVICE_ERROR(error, DEVICE_ERROR_UNSUPPORTED)) {
+			/* this smells like new fsogsmd -
+			use SetFunctionality instead */
+			ogsmd_device_set_functionality("full", TRUE, "",
+					_set_functionality_callback, NULL);
 		}
 		else if (IS_RESOURCE_ERROR(error, RESOURCE_ERROR_NOT_ENABLED)) {
 			g_message("GSM is not yet enabled, try again in 1s");
@@ -431,6 +459,7 @@ fso_resource_available_handler(const char *name, gboolean availability)
 		availability ? "available" : "vanished");
 	if (strcmp(name, "GSM") == 0) {
 		gsm_available = availability;
+		gsm_request_running = FALSE;
 		if (gsm_available)
 			fso_go_online_offline();
 	}
@@ -459,10 +488,10 @@ fso_resource_changed_handler(const char *name, gboolean state,
 				fso_set_antenna_power();
 			}
 		}
-		else if (!offline_mode && !gsm_ready) {
+/*		else if (!offline_mode && !gsm_ready) {
 			g_debug("GSM not ready... handle offline mode");
 			fso_go_online_offline();
-		}
+		}*/
 	}
 	else if (strcmp(name, "Display") == 0) {
 		g_debug("Display state state changed: %s", state ? "enabled" : "disabled");
