@@ -60,6 +60,14 @@ void phonefsod_usage_service_request_resource(PhonefsodUsageService * object,
 					       const char *resource,
 					       DBusGMethodInvocation * context);
 
+void
+phonefsod_usage_service_set_default_brightness(PhonefsodUsageService *object,
+					       int brightness,
+					       DBusGMethodInvocation *context);
+void
+phonefsod_usage_service_get_default_brightness(PhonefsodUsageService *object,
+					       DBusGMethodInvocation *context);
+
 PhonefsodUsageService *phonefsod_usage_service_new(void);
 
 #endif

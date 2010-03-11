@@ -239,3 +239,20 @@ phonefsod_usage_service_release_resource(PhonefsodUsageService * object,
 					 data);
 	}
 }
+
+void
+phonefsod_usage_service_set_default_brightness(PhonefsodUsageService *object,
+					       int brightness,
+					       DBusGMethodInvocation *context)
+{
+	default_brightness = brightness;
+	fso_dimit(100);
+	dbus_g_method_return(context);
+}
+
+void
+phonefsod_usage_service_get_default_brightness(PhonefsodUsageService *object,
+					       DBusGMethodInvocation *context)
+{
+	dbus_g_method_return(context, default_brightness);
+}

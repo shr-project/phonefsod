@@ -21,6 +21,9 @@ fso_register_network();
 void
 fso_sim_ready_actions(void);
 
+void
+fso_dimit(int brightness);
+
 /* signal handlers */
 void
 fso_resource_available_handler(const char *name,

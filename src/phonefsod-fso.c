@@ -46,11 +46,8 @@ static int incoming_calls_size = 0;
 static int outgoing_calls_size = 0;
 
 
-static int reference_brightness = -1;
 static gboolean display_state = FALSE;
 
-
-static void _dimit(int percent);
 
 /* --- call management --- */
 
@@ -105,8 +102,7 @@ gboolean
 fso_startup()
 {
 	fso_list_resources();
-	reference_brightness = default_brightness;
-	odeviced_display_set_brightness(reference_brightness,
+	odeviced_display_set_brightness(default_brightness,
 			NULL, NULL);
 	return FALSE;
 }
@@ -474,7 +470,7 @@ fso_resource_changed_handler(const char *name, gboolean state,
 		/* if something requests the Display resource we have
 		 * to undim it and eventually hide the IdleScreen */
 		if (display_state) {
-			_dimit(100);
+			fso_dimit(100);
 			/* Should just not pop, not hide when someone requests display
 			 * phoneuid_idle_screen_hide();*/
 		}
@@ -501,22 +497,20 @@ fso_device_idle_notifier_power_state_handler(GError * error,
 
 /* --- idle state --- */
 
-static void
-_dimit(int percent)
+void
+fso_dimit(int percent)
 {
 	/* -1 means dimming disabled */
 	if (percent < 0)
 		return;
 
-	int b = reference_brightness * percent / 100;
+	int b = default_brightness * percent / 100;
 	if (b > 100) {
 		b = 100;
 	}
 	else if (b < minimum_brightness) {
 		b = 0;
 	}
-
-	g_debug("_dimit: reference = %d; percent = %d; b = %d", reference_brightness, percent, b);
 
 	//odeviced_display_set_backlight(b, NULL, NULL);
 	odeviced_display_set_brightness(b, NULL, NULL);
@@ -526,15 +520,6 @@ _dimit(int percent)
 	else {
 		phoneuid_idle_screen_deactivate_screensaver();
 	}
-}
-
-static void
-_get_brightness_handler(GError *error, int brightness, gpointer userdata)
-{
-	if (!error) {
-		reference_brightness = brightness;
-	}
-	_dimit(dim_idle_percent);
 }
 
 static void
@@ -578,21 +563,16 @@ fso_device_idle_notifier_state_handler(const int state)
 
 	switch (state) {
 	case DEVICE_IDLE_STATE_BUSY:
-		_dimit(100);
+		fso_dimit(100);
 		break;
 	case DEVICE_IDLE_STATE_IDLE:
-		if (previous_idle_state == DEVICE_IDLE_STATE_BUSY) {
-			odeviced_display_get_brightness(_get_brightness_handler, NULL);
-		}
-		else {
-			_dimit(dim_idle_percent);
-		}
+		fso_dimit(dim_idle_percent);
 		break;
 	case DEVICE_IDLE_STATE_IDLE_DIM:
-		_dimit(dim_idle_dim_percent);
+		fso_dimit(dim_idle_dim_percent);
 		break;
 	case DEVICE_IDLE_STATE_PRELOCK:
-		_dimit(dim_idle_prelock_percent);
+		fso_dimit(dim_idle_prelock_percent);
 		break;
 	case DEVICE_IDLE_STATE_LOCK:
 		if (idle_screen & IDLE_SCREEN_LOCK &&
@@ -659,7 +639,7 @@ fso_call_status_handler(const int call_id, const int status,
 					&incoming_calls_size, call_id) == -1) {
 				_call_add(&incoming_calls,
 					&incoming_calls_size, call_id);
-				_dimit(100);
+				fso_dimit(100);
 				ousaged_request_resource("CPU", NULL, NULL);
 				phoneuid_call_management_show_incoming(
 						call_id, status, number);
