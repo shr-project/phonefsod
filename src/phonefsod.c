@@ -684,46 +684,41 @@ extern int main (int argc, char *argv[])
 	/* become the requested user */
 	seteuid (effective_user_id);
 
-	/* block all signals */
-	sigfillset (&signal_set);
-	pthread_sigmask (SIG_BLOCK, &signal_set, NULL);
+	if (!i_debug) {
+		/* block all signals */
+		sigfillset (&signal_set);
+		pthread_sigmask (SIG_BLOCK, &signal_set, NULL);
 
-	/* create the signal handling thread */
-	sig_thread = g_thread_create ((GThreadFunc)_thread_handle_signals,
-			main_loop, TRUE, &gerror);
-	if (gerror != NULL) {
-		g_message("Create signal thread failed: %s", gerror->message);
-		g_error_free(gerror);
-		g_option_context_free(context);
-		g_main_loop_unref (main_loop);
-		exit (EXIT_FAILURE);
+		/* create the signal handling thread */
+		sig_thread = g_thread_create ((GThreadFunc)_thread_handle_signals,
+				main_loop, TRUE, &gerror);
+		if (gerror != NULL) {
+			g_message("Create signal thread failed: %s", gerror->message);
+			g_error_free(gerror);
+			g_option_context_free(context);
+			g_main_loop_unref (main_loop);
+			exit (EXIT_FAILURE);
+		}
 	}
 
 	_load_config();
 
+	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &gerror);
+	if (gerror) {
+		g_error("%d: %s", gerror->code, gerror->message);
+		g_error_free(gerror);
+		g_option_context_free(context);
+		g_main_loop_unref(main_loop);
+		exit(EXIT_FAILURE);
+	}
+
+	if (!fso_init()) {
+		g_option_context_free(context);
+		g_main_loop_unref(main_loop);
+		exit(EXIT_FAILURE);
+	}
+
 	phonefsod_dbus_setup();
-
-	/* initialize libframeworkd-glib */
-	FrameworkdHandler *fwHandler = frameworkd_handler_new();
-	fwHandler->simAuthStatus = fso_sim_auth_status_handler;
-	fwHandler->simReadyStatus = fso_sim_ready_status_handler;
-	//fwHandler->simIncomingStoredMessage =
-	//	fso_sim_incoming_stored_message_handler;
-	fwHandler->callCallStatus = fso_call_status_handler;
-	fwHandler->deviceIdleNotifierState =
-		fso_device_idle_notifier_state_handler;
-	fwHandler->deviceInputEvent = fso_device_input_event_handler;
-	fwHandler->incomingUssd = fso_incoming_ussd_handler;
-
-	fwHandler->usageResourceAvailable =
-		fso_resource_available_handler;
-	fwHandler->usageResourceChanged = fso_resource_changed_handler;
-	fwHandler->networkStatus = fso_network_status_handler;
-	fwHandler->pimIncomingMessage = fso_incoming_message_handler;
-
-	frameworkd_handler_connect(fwHandler);
-
-	g_debug("connected to FSO");
 
 	//notify = inotify_init();
 	//inotify_add_watch(notify, PHONEFSOD_CONFIG, IN_MODIFY);
@@ -734,12 +729,14 @@ extern int main (int argc, char *argv[])
 	g_main_loop_run(main_loop);
 
 	/* Cleanup and exit */
-	trc = g_thread_join(sig_thread);
-	g_message("Signal thread was ended by a %s signal.",
-			g_strsignal(GPOINTER_TO_INT(trc)) );
+	if (!i_debug) {
+		trc = g_thread_join(sig_thread);
+		g_message("Signal thread was ended by a %s signal.",
+				g_strsignal(GPOINTER_TO_INT(trc)) );
 
-	pthread_sigmask (SIG_UNBLOCK, &signal_set, NULL);
-	g_option_context_free (context);
+		pthread_sigmask (SIG_UNBLOCK, &signal_set, NULL);
+		g_option_context_free (context);
+	}
 	g_main_loop_unref (main_loop);
 
 //	if (incoming_calls)
