@@ -620,12 +620,12 @@ fso_device_idle_notifier_state_handler(const int state)
 
 /* --- InputEvent --- */
 void
-fso_device_input_event_handler(int source, int action, int duration)
+fso_device_input_event_handler(char *source, char *action, int duration)
 {
-	g_debug("INPUT EVENT: %d - %d - %d", source, action, duration);
+	g_debug("INPUT EVENT: %s - %s - %d", source, action, duration);
 	if (idle_screen & IDLE_SCREEN_AUX &&
-			source == DEVICE_INPUT_SOURCE_AUX &&
-			action == DEVICE_INPUT_ACTION_RELEASED) {
+			!strcmp(source, "AUX") &&
+			!strcmp(action, "released")) {
 		phoneuid_idle_screen_toggle();
 	}
 }

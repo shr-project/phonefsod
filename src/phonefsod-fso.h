@@ -38,7 +38,7 @@ fso_device_idle_notifier_power_state_handler(GError * error,
 void
 fso_device_idle_notifier_state_handler(const int state);
 void
-fso_device_input_event_handler(int source, int action, int duration);
+fso_device_input_event_handler(char *source, char *action, int duration);
 void
 fso_call_status_handler(const int call_id, const int status,
 			       GHashTable * properties);
