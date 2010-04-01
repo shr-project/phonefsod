@@ -72,6 +72,42 @@ _write_offline_mode_to_config(void)
 }
 
 static void
+_write_default_brightness_to_config(void)
+{
+	GError *error = NULL;
+	GKeyFile *keyfile;
+	GKeyFileFlags flags;
+	gsize size;
+	char *config_data;
+
+	keyfile = g_key_file_new();
+	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+	if (g_key_file_load_from_file
+	    (keyfile, PHONEFSOD_CONFIG, flags, &error)) {
+		g_key_file_set_integer(keyfile, "idle",
+				"default_brightness", default_brightness);
+		config_data = g_key_file_to_data(keyfile, &size, NULL);
+		if (!config_data) {
+			g_message("could not convert config data to write \
+					default brightness to config");
+		}
+		else {
+			if (!g_file_set_contents(PHONEFSOD_CONFIG, config_data,
+					size, &error))
+			{
+				g_warning("failed writing default brightness \
+					to config: %s", error->message);
+				g_error_free(error);
+			}
+			g_free(config_data);
+		}
+	}
+
+	if (keyfile)
+		g_key_file_free(keyfile);
+}
+
+static void
 phonefsod_usage_service_class_init(PhonefsodUsageServiceClass * klass)
 {
 	GError *error = NULL;
@@ -246,6 +282,7 @@ phonefsod_usage_service_set_default_brightness(PhonefsodUsageService *object,
 					       DBusGMethodInvocation *context)
 {
 	default_brightness = brightness;
+	_write_default_brightness_to_config();
 	fso_dimit(100);
 	dbus_g_method_return(context);
 }
