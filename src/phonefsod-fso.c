@@ -61,7 +61,7 @@ static void _list_resources_callback(GSource *source, GAsyncResult *res, gpointe
 static void _request_resource_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _going_offline_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _going_online_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _sim_ready_status_callback(GSource *source, GAsyncResult *res, gpointer data);
+static void _gsm_sim_ready_status_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _gsm_sim_auth_status_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data);
@@ -70,9 +70,9 @@ static void _get_power_status_callback(GSource *source, GAsyncResult *res, gpoin
 static void _usage_resource_available_handler(GSource *source, char *resource, gboolean availability, gpointer data);
 static void _usage_resource_changed_handler(GSource *source, char *resource, gboolean state, GHashTable *attributes, gpointer data);
 static void _gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus status, gpointer data);
-// static void _sim_ready_handler(GSource *source, gboolean status, gpointer data);
-static void _device_idle_notifier_state_handler(GSource *source, int state, gpointer data);
-static void _device_input_event_handler(GSource *source, char *src, char *action, int duration, gpointer data);
+static void _gsm_sim_ready_status_handler(GSource *source, gboolean status, gpointer data);
+static void _device_idle_notifier_state_handler(GSource *source, FreeSmartphoneDeviceIdleState state, gpointer data);
+static void _device_input_event_handler(GSource *source, char *src, FreeSmartphoneDeviceInputState state, int duration, gpointer data);
 static void _gsm_call_status_handler(GSource *source, int call_id, int status, GHashTable *properties, gpointer data);
 static void _pim_incoming_message_handler(GSource *source, char *message_path, gpointer data);
 static void _gsm_network_incoming_ussd_handler(GSource *source, int mode, char *message, gpointer data);
@@ -220,14 +220,14 @@ fso_dimit(int percent)
 		b = 0;
 	}
 
-/*	free_smartphone_device_display_set_brightness
+	free_smartphone_device_display_set_brightness
 			(fso.display, b, NULL, NULL);
 	if (b == 0) {
 		phoneuid_idle_screen_activate_screensaver();
 	}
 	else {
 		phoneuid_idle_screen_deactivate_screensaver();
-	}*/
+	}
 	g_debug("fso_dimit(%d) (done)", percent);
 }
 
@@ -677,15 +677,19 @@ _usage_resource_changed_handler(GSource *source, char *name, gboolean state,
 
 
 static void
-_device_idle_notifier_state_handler(GSource *source, int state, gpointer data)
+_device_idle_notifier_state_handler(GSource *source,
+				    FreeSmartphoneDeviceIdleState state,
+				    gpointer data)
 {
 	(void) source;
 	(void) data;
 
 	/* while Display resource is requested nothing to do */
-	if (display_state)
+	if (display_state) {
+		g_debug("Not handling Idle while Display is requested");
 		return;
-
+	}
+        g_debug("IdleState is %d", state);
 	switch (state) {
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_BUSY:
 		fso_dimit(100);
@@ -714,14 +718,16 @@ _device_idle_notifier_state_handler(GSource *source, int state, gpointer data)
 }
 
 static void
-_device_input_event_handler(GSource *source, char *src, char *action,
+_device_input_event_handler(GSource *source, char *src,
+			    FreeSmartphoneDeviceInputState state,
 			    int duration, gpointer data)
 {
 	(void) source;
 	(void) data;
-	g_debug("INPUT EVENT: %d - %d - %d", source, action, duration);
+	g_debug("INPUT EVENT: %s - %d - %d", src, state, duration);
 	if (idle_screen & IDLE_SCREEN_AUX &&
-		!strcmp(src, "AUX") && !strcmp(action, "released")) {
+		!strcmp(src, "AUX") &&
+		state == FREE_SMARTPHONE_DEVICE_INPUT_STATE_RELEASED) {
 		phoneuid_idle_screen_toggle();
 	}
 }
@@ -820,6 +826,8 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 static void
 _gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus status, gpointer data)
 {
+	(void) data;
+	(void) source;
 	g_debug("_gsm_sim_auth_status_handler(status=%d)", status);
 	if (status == FREE_SMARTPHONE_GSM_SIM_AUTH_STATUS_READY) {
 		g_debug("sim auth ready");
@@ -829,13 +837,13 @@ _gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus sta
 	}
 }
 
-// static void
-// _sim_ready_status_handler(gboolean status)
-// {
-// 	g_debug("fso_sim_ready_status_handler()");
-// 	if (status)
-// 		fso_sim_ready_actions();
-// }
+static void
+_gsm_sim_ready_status_handler(GSource *source, gboolean status, gpointer data)
+{
+	g_debug("fso_sim_ready_status_handler(%s)", status ? "ready" : "NOT ready");
+/*	if (status)
+		fso_sim_ready_actions();*/
+}
 
 static void
 _pim_incoming_message_handler(GSource *source, char *message_path, gpointer data)
