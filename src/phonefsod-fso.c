@@ -7,22 +7,11 @@
 #include <dbus/dbus-glib-lowlevel.h>
 #include <dbus/dbus-glib-bindings.h>
 #include <freesmartphone.h>
+#include <fsoframework.h>
 //#include <phoneui/phoneui.h>
 #include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
-
-#define FSO_USAGE_PATH "org.freesmartphone.ousaged"
-#define FSO_USAGE_OBJECT "/org/freesmartphone/Usage"
-#define FSO_GSM_PATH "org.freesmartphone.ogsmd"
-#define FSO_GSM_DEVICE_OBJECT "/org/freesmartphone/GSM/Device"
-#define FSO_PIM_PATH "org.freesmartphone.opimd"
-#define FSO_PIM_MESSAGES_OBJECT "/org/freesmartphone/PIM/Messages"
-#define FSO_DEVICE_PATH "org.freesmartphone.odeviced"
-#define FSO_DEVICE_IDLE_NOTIFIER_OBJECT "/org/freesmartphone/Device/IdleNotifier/0"
-#define FSO_DEVICE_INPUT_OBJECT "/org/freesmartphone/Device/Input"
-#define FSO_DEVICE_DISPLAY_OBJECT "/org/freesmartphone/Devíce/Display/0"
-#define FSO_DEVICE_POWER_SUPPLY_OBJECT "/org/freesmartphone/PowerSupply"
 
 struct _fso {
 	FreeSmartphoneUsage *usage;
@@ -99,7 +88,8 @@ gboolean
 fso_init()
 {
 	fso.usage = free_smartphone_get_usage_proxy(system_bus,
-				FSO_USAGE_PATH, FSO_USAGE_OBJECT);
+				FSO_FRAMEWORK_USAGE_ServiceDBusName,
+				FSO_FRAMEWORK_USAGE_ServicePathPrefix);
 	if (!fso.usage) {
 		g_critical("Failed to connect to Usage");
 		return FALSE;
@@ -111,7 +101,8 @@ fso_init()
 	g_debug("Connected to FSO/Usage");
 
 	fso.gsm_device = free_smartphone_gsm_get_device_proxy(system_bus,
-				FSO_GSM_PATH, FSO_GSM_DEVICE_OBJECT);
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
 	if (!fso.gsm_device) {
 		g_critical("Failed to connect to GSM/Device");
 		return FALSE;
@@ -119,7 +110,8 @@ fso_init()
 	g_debug("Connected to FSO/GSM/Device");
 
 	fso.gsm_sim = free_smartphone_gsm_get_s_i_m_proxy(system_bus,
-				FSO_GSM_PATH, FSO_GSM_DEVICE_OBJECT);
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
 	if (!fso.gsm_sim) {
 		g_critical("Failed to connect to GSM/SIM");
 		return FALSE;
@@ -127,11 +119,12 @@ fso_init()
 	g_debug("Connected to FSO/GSM/SIM");
 	g_signal_connect(G_OBJECT(fso.gsm_sim), "auth-status",
 			 G_CALLBACK(_gsm_sim_auth_status_handler), NULL);
-// 	g_signal_connect(G_OBJECT(fso.gsm_sim), "ready-status",
-// 			 G_CALLBACK(fso_sim_ready_status_handler), NULL);
+	g_signal_connect(G_OBJECT(fso.gsm_sim), "ready-status",
+			 G_CALLBACK(_gsm_sim_ready_status_handler), NULL);
 
 	fso.gsm_network = free_smartphone_gsm_get_network_proxy(system_bus,
-				FSO_GSM_PATH, FSO_GSM_DEVICE_OBJECT);
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
 	if (!fso.gsm_network) {
 		g_critical("Failed to connect to GSM/Network");
 		return FALSE;
@@ -143,7 +136,8 @@ fso_init()
 	g_debug("Connected to FSO/GSM/Network");
 
 	fso.gsm_call = free_smartphone_gsm_get_call_proxy(system_bus,
-				FSO_GSM_PATH, FSO_GSM_DEVICE_OBJECT);
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
 	if (!fso.gsm_call) {
 		g_critical("Failed to connect to GSM/Call");
 		return FALSE;
@@ -153,7 +147,8 @@ fso_init()
 	g_debug("Connected to FSO/GSM/Call");
 
 	fso.pim_messages = free_smartphone_pim_get_messages_proxy(system_bus,
-				FSO_PIM_PATH, FSO_PIM_MESSAGES_OBJECT);
+				FSO_FRAMEWORK_PIM_ServiceDBusName,
+				FSO_FRAMEWORK_PIM_MessagesServicePath);
 	if (!fso.pim_messages) {
 		g_critical("Failed to connect to PIM/Messages");
 		return FALSE;
@@ -163,8 +158,8 @@ fso_init()
 	g_debug("Connected to FSO/PIM/Messages");
 
 	fso.idle_notifier = free_smartphone_device_get_idle_notifier_proxy
-				(system_bus, FSO_DEVICE_PATH,
-				 FSO_DEVICE_IDLE_NOTIFIER_OBJECT);
+				(system_bus, FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+				 FSO_FRAMEWORK_DEVICE_IdleNotifierServicePath "/0");
 	if (!fso.idle_notifier) {
 		g_critical("Failed to connect to Device/IdleNotifier");
 		return FALSE;
@@ -174,7 +169,8 @@ fso_init()
 	g_debug("Connected to FSO/Device/IdleNotifier");
 
 	fso.input = free_smartphone_device_get_input_proxy(system_bus,
-				FSO_DEVICE_PATH, FSO_DEVICE_INPUT_OBJECT);
+				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+				FSO_FRAMEWORK_DEVICE_InputServicePath);
 	if (!fso.input) {
 		g_critical("Failed to connect to Device/Input");
 		return FALSE;
@@ -183,13 +179,15 @@ fso_init()
 			 G_CALLBACK(_device_input_event_handler), NULL);
 	g_debug("Connected to FSO/Device/Input");
 
-// 	fso.display = free_smartphone_device_get_display_proxy(system_bus,
-// 				FSO_DEVICE_PATH, FSO_DEVICE_DISPLAY_OBJECT);
-// 	g_debug("Connected to FSO/Device/Display");
+	fso.display = free_smartphone_device_get_display_proxy(system_bus,
+				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+				FSO_FRAMEWORK_DEVICE_DisplayServicePath "/0");
+	g_debug("Connected to FSO/Device/Display");
 
 	fso.power_supply = free_smartphone_device_get_power_supply_proxy
-				(system_bus, FSO_DEVICE_PATH,
-				 FSO_DEVICE_POWER_SUPPLY_OBJECT);
+				(system_bus,
+				 FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+				 FSO_FRAMEWORK_DEVICE_PowerSupplyServicePath);
 	g_debug("Connected to FSO/Device/PowerSupply");
 
 	g_debug("Done connecting to FSO");

@@ -31,6 +31,7 @@ phonefsod_CFLAGS = \
 	@DBUS_GLIB_CFLAGS@ \
 	@DBUS_CFLAGS@ \
 	@FSO_GLIB_CFLAGS@ \
+	@FSO_FRAMEWORK_CFLAGS@ \
 	-ggdb
 
 phonefsod_LDFLAGS = \
