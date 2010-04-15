@@ -402,31 +402,6 @@ _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data)
 	free_smartphone_usage_suspend(fso.usage, NULL, NULL);
 }
 
-// static void
-// _sim_ready_status_callback(GSource *source, GAsyncResult *res, gpointer data)
-// {
-// 	GError *error = NULL;
-// 	gboolean status;
-//
-// 	status = free_smartphone_gsm_sim_get_sim_ready_finish
-// 			(FREE_SMARTPHONE_GSM_SIM(source), res, &error);
-//
-// 	if (error) {
-// 		g_debug("GetSimReady failed: %s %s %d", error->message,
-// 			g_quark_to_string(error->domain), error->code);
-// 		return;
-// 	}
-//
-// 	/* if sim is already ready (by the ReadyStatus signal) - nothing to do */
-// 	if (sim_ready) {
-// 		g_debug("SIM was already ready... nothing to do");
-// 		return;
-// 	}
-//
-// 	g_debug("_sim_ready_status_callback(status=%d)", status);
-// 	if (status)
-// 		fso_sim_ready_actions();
-// }
 
 #if 0
 static void
