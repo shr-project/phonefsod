@@ -94,6 +94,8 @@ fso_init()
 	fso_connect_pim();
 	fso_connect_device();
 
+	/* send fsogsmd a ping to dbus-activate it, if not running yet */
+	free_smartphone_gsm_device_get_device_status(fso.gsm_device, NULL, NULL);
 	g_debug("Done connecting to FSO");
 
 	return TRUE;
@@ -353,7 +355,6 @@ _list_resources_callback(GSource *source, GAsyncResult *res, gpointer data)
 		if (gsm_available)
 			_fso_request_gsm();
 	}
-	// FIXME: try to dbus-activate fsogsmd with org.freedesktop.Peer.Ping()
 }
 
 static void
