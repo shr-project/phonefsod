@@ -659,7 +659,6 @@ _device_idle_notifier_state_handler(GSource *source,
 		g_debug("Not handling Idle while Display is requested");
 		return;
 	}
-        g_debug("IdleState is %d", state);
 	switch (state) {
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_BUSY:
 		fso_dimit(100);
