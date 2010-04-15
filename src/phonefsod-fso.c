@@ -530,36 +530,6 @@ fso_get_auth_status()
 	return (FALSE);
 }
 
-static void
-_register_to_network_callback(GError * error, gpointer userdata)
-{
-	g_debug("register_to_network_callback()");
-	if (error == NULL) {
-		g_debug("Successfully registered to the network");
-	}
-	else {
-		g_debug("Registering to network failed: %s %s %d",
-			error->message, g_quark_to_string(error->domain),
-			error->code);
-		/* when registering to the network fails we have to retry
-		 * after some time again ... but only as long as GSM is
-		 * enabled */
-		if (gsm_ready) {
-			/* gsm_reregister_timeout is in seconds ... */
-			g_timeout_add(gsm_reregister_timeout * 1000,
-				fso_register_network, NULL);
-		}
-	}
-}
-
-gboolean
-fso_register_network(gpointer data)
-{
-	ogsmd_network_register(_register_to_network_callback, NULL);
-	return (FALSE);
-}
-
-
 /* --- stuff happening when the SIM has ready status --- */
 
 void
