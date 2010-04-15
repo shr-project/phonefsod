@@ -38,8 +38,9 @@
 #include <glib/gstdio.h>
 #include <glib-object.h>
 #include <glib/gthread.h>
+#include <dbus/dbus-glib.h>
 
-#include <frameworkd-glib/frameworkd-glib-dbus.h>
+#include <fsoframework.h>
 
 #include "phonefsod-dbus.h"
 #include "phonefsod-fso.h"
@@ -181,6 +182,16 @@ _load_config()
 					"offline_mode", &error);
 		if (error) {
 			offline_mode = FALSE;
+			g_error_free(error);
+			error = NULL;
+		}
+
+		inhibit_suspend_on_startup_time =
+			g_key_file_get_integer(keyfile, "gsm",
+					       "inhibit_suspend_on_startup_time",
+					       &error);
+		if (error) {
+			inhibit_suspend_on_startup_time = 360;
 			g_error_free(error);
 			error = NULL;
 		}
@@ -623,6 +634,29 @@ static gint _daemonize (gchar *pidfilename)
 	return (EXIT_SUCCESS);
 }
 
+static void
+_name_owner_changed(DBusGProxy *proxy, const char *name,
+		    const char *prev, const char *new, gpointer data)
+{
+	(void) proxy;
+	(void) data;
+	g_debug("NameOwnerChanged: %s / %s / %s", name, prev, new);
+	if (new && *new) {
+		if (!strcmp(name, FSO_FRAMEWORK_USAGE_ServiceDBusName)) {
+			fso_connect_usage();
+		}
+		else if (!strcmp(name, FSO_FRAMEWORK_GSM_ServiceDBusName)) {
+			fso_connect_gsm();
+		}
+		else if (!strcmp(name, FSO_FRAMEWORK_PIM_ServiceDBusName)) {
+			fso_connect_pim();
+		}
+		else if (!strcmp(name, FSO_FRAMEWORK_DEVICE_ServiceDBusName)) {
+			fso_connect_device();
+		}
+	}
+}
+
 /* Main Entry Point for this Daemon */
 extern int main (int argc, char *argv[])
 {
@@ -637,6 +671,7 @@ extern int main (int argc, char *argv[])
 	uid_t     effective_user_id = 0;
 	gint      rc = 0;
 	struct    passwd *userinfo = NULL;
+	DBusGProxy *dbus_proxy;
 
 	/* initialize threading and mainloop */
 	g_type_init();
@@ -712,6 +747,17 @@ extern int main (int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
+	/* register for NameOwnerChanged */
+	dbus_proxy = dbus_g_proxy_new_for_name (system_bus,
+			DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS);
+	dbus_g_proxy_add_signal(dbus_proxy, "NameOwnerChanged", G_TYPE_STRING,
+				G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INVALID);
+
+	dbus_g_proxy_connect_signal(dbus_proxy, "NameOwnerChanged",
+				    G_CALLBACK(_name_owner_changed), NULL, NULL);
+
+
+	/* connect and init FSO */
 	if (!fso_init()) {
 		g_option_context_free(context);
 		g_main_loop_unref(main_loop);

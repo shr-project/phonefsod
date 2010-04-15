@@ -1,6 +1,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <glib.h>
 #include <glib/gthread.h>
 #include <dbus/dbus-glib.h>
@@ -45,6 +46,7 @@ static gboolean sim_ready = FALSE;
 static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
 static gboolean gsm_ready = FALSE;
+static time_t startup_time = FALSE;
 static call_t *incoming_calls = NULL;
 static call_t *outgoing_calls = NULL;
 static int incoming_calls_size = 0;
@@ -55,6 +57,7 @@ static gboolean display_state = FALSE;
 static gboolean _fso_list_resources();
 static gboolean _fso_request_gsm();
 static void _fso_suspend();
+static void _startup_check();
 
 /* dbus method callbacks */
 static void _list_resources_callback(GSource *source, GAsyncResult *res, gpointer data);
@@ -83,122 +86,135 @@ static void _call_add(call_t ** calls, int *size, int id);
 static int _call_check(call_t * calls, int *size, int id);
 static void _call_remove(call_t ** calls, int *size, int id);
 
-
 gboolean
 fso_init()
 {
-	fso.usage = free_smartphone_get_usage_proxy(system_bus,
-				FSO_FRAMEWORK_USAGE_ServiceDBusName,
-				FSO_FRAMEWORK_USAGE_ServicePathPrefix);
-	if (!fso.usage) {
-		g_critical("Failed to connect to Usage");
-		return FALSE;
-	}
-	g_signal_connect(G_OBJECT(fso.usage), "resource-changed",
-			 G_CALLBACK(_usage_resource_changed_handler), NULL);
-	g_signal_connect(G_OBJECT(fso.usage), "resource-available",
-			 G_CALLBACK(_usage_resource_available_handler), NULL);
-	g_debug("Connected to FSO/Usage");
-
-	fso.gsm_device = free_smartphone_gsm_get_device_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
-	if (!fso.gsm_device) {
-		g_critical("Failed to connect to GSM/Device");
-		return FALSE;
-	}
-	g_debug("Connected to FSO/GSM/Device");
-
-	fso.gsm_sim = free_smartphone_gsm_get_s_i_m_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
-	if (!fso.gsm_sim) {
-		g_critical("Failed to connect to GSM/SIM");
-		return FALSE;
-	}
-	g_debug("Connected to FSO/GSM/SIM");
-	g_signal_connect(G_OBJECT(fso.gsm_sim), "auth-status",
-			 G_CALLBACK(_gsm_sim_auth_status_handler), NULL);
-	g_signal_connect(G_OBJECT(fso.gsm_sim), "ready-status",
-			 G_CALLBACK(_gsm_sim_ready_status_handler), NULL);
-
-	fso.gsm_network = free_smartphone_gsm_get_network_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
-	if (!fso.gsm_network) {
-		g_critical("Failed to connect to GSM/Network");
-		return FALSE;
-	}
-	g_signal_connect(G_OBJECT(fso.gsm_network), "status",
-			 G_CALLBACK(_gsm_network_status_handler), NULL);
-	g_signal_connect(G_OBJECT(fso.gsm_network), "incoming-ussd",
-			 G_CALLBACK(_gsm_network_incoming_ussd_handler), NULL);
-	g_debug("Connected to FSO/GSM/Network");
-
-	fso.gsm_call = free_smartphone_gsm_get_call_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
-	if (!fso.gsm_call) {
-		g_critical("Failed to connect to GSM/Call");
-		return FALSE;
-	}
-	g_signal_connect(G_OBJECT(fso.gsm_call), "call-status",
-			 G_CALLBACK(_gsm_call_status_handler), NULL);
-	g_debug("Connected to FSO/GSM/Call");
-
-	fso.pim_messages = free_smartphone_pim_get_messages_proxy(system_bus,
-				FSO_FRAMEWORK_PIM_ServiceDBusName,
-				FSO_FRAMEWORK_PIM_MessagesServicePath);
-	if (!fso.pim_messages) {
-		g_critical("Failed to connect to PIM/Messages");
-		return FALSE;
-	}
-	g_signal_connect(G_OBJECT(fso.pim_messages), "incoming-message",
-			 G_CALLBACK(_pim_incoming_message_handler), NULL);
-	g_debug("Connected to FSO/PIM/Messages");
-
-	fso.idle_notifier = free_smartphone_device_get_idle_notifier_proxy
-				(system_bus, FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-				 FSO_FRAMEWORK_DEVICE_IdleNotifierServicePath "/0");
-	if (!fso.idle_notifier) {
-		g_critical("Failed to connect to Device/IdleNotifier");
-		return FALSE;
-	}
-	g_signal_connect(G_OBJECT(fso.idle_notifier), "state",
-			 G_CALLBACK(_device_idle_notifier_state_handler), NULL);
-	g_debug("Connected to FSO/Device/IdleNotifier");
-
-	fso.input = free_smartphone_device_get_input_proxy(system_bus,
-				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-				FSO_FRAMEWORK_DEVICE_InputServicePath);
-	if (!fso.input) {
-		g_critical("Failed to connect to Device/Input");
-		return FALSE;
-	}
-	g_signal_connect(G_OBJECT(fso.input), "event",
-			 G_CALLBACK(_device_input_event_handler), NULL);
-	g_debug("Connected to FSO/Device/Input");
-
-	fso.display = free_smartphone_device_get_display_proxy(system_bus,
-				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-				FSO_FRAMEWORK_DEVICE_DisplayServicePath "/0");
-	g_debug("Connected to FSO/Device/Display");
-
-	fso.power_supply = free_smartphone_device_get_power_supply_proxy
-				(system_bus,
-				 FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-				 FSO_FRAMEWORK_DEVICE_PowerSupplyServicePath);
-	g_debug("Connected to FSO/Device/PowerSupply");
+	fso_connect_usage();
+	fso_connect_gsm();
+	fso_connect_pim();
+	fso_connect_device();
 
 	g_debug("Done connecting to FSO");
 
 	return TRUE;
 }
 
+void
+fso_connect_usage()
+{
+	fso.usage = free_smartphone_get_usage_proxy(system_bus,
+				FSO_FRAMEWORK_USAGE_ServiceDBusName,
+				FSO_FRAMEWORK_USAGE_ServicePathPrefix);
+	if (fso.usage) {
+		g_signal_connect(G_OBJECT(fso.usage), "resource-changed",
+				G_CALLBACK(_usage_resource_changed_handler), NULL);
+		g_signal_connect(G_OBJECT(fso.usage), "resource-available",
+				G_CALLBACK(_usage_resource_available_handler), NULL);
+		g_debug("Connected to FSO/Usage");
+	}
+}
+
+void
+fso_connect_gsm()
+{
+	fso.gsm_device = free_smartphone_gsm_get_device_proxy(system_bus,
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	if (fso.gsm_device) {
+		g_debug("Connected to FSO/GSM/Device");
+	}
+
+	fso.gsm_sim = free_smartphone_gsm_get_s_i_m_proxy(system_bus,
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	if (fso.gsm_sim) {
+		g_debug("Connected to FSO/GSM/SIM");
+		g_signal_connect(G_OBJECT(fso.gsm_sim), "auth-status",
+				G_CALLBACK(_gsm_sim_auth_status_handler), NULL);
+/*		g_signal_connect(G_OBJECT(fso.gsm_sim), "ready-status",
+				G_CALLBACK(_gsm_sim_ready_status_handler), NULL);*/
+	}
+
+	fso.gsm_network = free_smartphone_gsm_get_network_proxy(system_bus,
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	if (fso.gsm_network) {
+		g_signal_connect(G_OBJECT(fso.gsm_network), "status",
+				G_CALLBACK(_gsm_network_status_handler), NULL);
+		g_signal_connect(G_OBJECT(fso.gsm_network), "incoming-ussd",
+				G_CALLBACK(_gsm_network_incoming_ussd_handler), NULL);
+		g_debug("Connected to FSO/GSM/Network");
+	}
+
+	fso.gsm_call = free_smartphone_gsm_get_call_proxy(system_bus,
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	if (fso.gsm_call) {
+		g_signal_connect(G_OBJECT(fso.gsm_call), "call-status",
+				G_CALLBACK(_gsm_call_status_handler), NULL);
+		g_debug("Connected to FSO/GSM/Call");
+	}
+
+}
+
+void
+fso_connect_pim()
+{
+	fso.pim_messages = free_smartphone_pim_get_messages_proxy(system_bus,
+				FSO_FRAMEWORK_PIM_ServiceDBusName,
+				FSO_FRAMEWORK_PIM_MessagesServicePath);
+	if (fso.pim_messages) {
+		g_signal_connect(G_OBJECT(fso.pim_messages), "incoming-message",
+				G_CALLBACK(_pim_incoming_message_handler), NULL);
+		g_debug("Connected to FSO/PIM/Messages");
+	}
+}
+
+void
+fso_connect_device()
+{
+	fso.idle_notifier = free_smartphone_device_get_idle_notifier_proxy
+			(system_bus, FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+			FSO_FRAMEWORK_DEVICE_IdleNotifierServicePath "/0");
+	if (fso.idle_notifier) {
+		g_signal_connect(G_OBJECT(fso.idle_notifier), "state",
+			G_CALLBACK(_device_idle_notifier_state_handler), NULL);
+		g_debug("Connected to FSO/Device/IdleNotifier");
+	}
+
+	fso.input = free_smartphone_device_get_input_proxy(system_bus,
+				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+				FSO_FRAMEWORK_DEVICE_InputServicePath);
+	if (fso.input) {
+		g_signal_connect(G_OBJECT(fso.input), "event",
+				 G_CALLBACK(_device_input_event_handler), NULL);
+		g_debug("Connected to FSO/Device/Input");
+	}
+
+	fso.display = free_smartphone_device_get_display_proxy(system_bus,
+				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+				FSO_FRAMEWORK_DEVICE_DisplayServicePath "/0");
+	if (fso.display) {
+		g_debug("Connected to FSO/Device/Display");
+	}
+
+	fso.power_supply = free_smartphone_device_get_power_supply_proxy
+				(system_bus,
+				 FSO_FRAMEWORK_DEVICE_ServiceDBusName,
+				 FSO_FRAMEWORK_DEVICE_PowerSupplyServicePath);
+	if (fso.power_supply) {
+		g_debug("Connected to FSO/Device/PowerSupply");
+	}
+}
+
 gboolean
 fso_startup()
 {
 	g_debug("FSO starting up");
+	if (!offline_mode) {
+		g_debug("Inhibiting suspend during startup phase");
+		startup_time = time(NULL);
+	}
 	_fso_list_resources();
 	fso_dimit(100);
 	return FALSE;
@@ -235,6 +251,7 @@ gboolean
 fso_set_functionality()
 {
 	if (offline_mode) {
+		startup_time = -1;
 		free_smartphone_gsm_device_set_functionality
 			(fso.gsm_device, "airplane", FALSE, "",
 			(GAsyncReadyCallback)_set_functionality_callback, NULL);
@@ -275,6 +292,7 @@ _fso_request_gsm()
 	else {
 		g_warning("Not requesting GSM as it is not available");
 	}
+	_startup_check();
 	return FALSE;
 }
 
@@ -282,6 +300,7 @@ static void
 _fso_suspend(void)
 {
 	if (auto_suspend == SUSPEND_NEVER ||
+			startup_time > 0 ||
 			incoming_calls_size > 0 ||
 			outgoing_calls_size > 0) {
 		return;
@@ -313,6 +332,7 @@ _list_resources_callback(GSource *source, GAsyncResult *res, gpointer data)
 	g_debug("list_resources_callback()");
 	resources = free_smartphone_usage_list_resources_finish
 			(fso.usage, res, &count, &error);
+        _startup_check();
 	if (error) {
 		g_message("  error: (%d) %s", error->code, error->message);
 		g_timeout_add(1000, _fso_list_resources, NULL);
@@ -333,6 +353,7 @@ _list_resources_callback(GSource *source, GAsyncResult *res, gpointer data)
 		if (gsm_available)
 			_fso_request_gsm();
 	}
+	// FIXME: try to dbus-activate fsogsmd with org.freedesktop.Peer.Ping()
 }
 
 static void
@@ -344,6 +365,8 @@ _request_resource_callback(GSource *source, GAsyncResult *res, gpointer data)
 	g_debug("_request_resource_callback()");
 
 	gsm_request_running = FALSE;
+	_startup_check();
+
 	free_smartphone_usage_request_resource_finish(fso.usage, res, &error);
 	if (error == NULL) {
 		/* nothing to do when there is no error
@@ -375,12 +398,12 @@ _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data)
 
 	free_smartphone_gsm_device_set_functionality_finish(fso.gsm_device,
 							    res, &error);
-
 	if (error) {
 		g_warning("SetFunctionality gave an error: %s", error->message);
+		_startup_check();
 		return;
 	}
-	// TODO: proper error handling from set antenna power for sim auth
+	startup_time = -1;
 }
 
 static void
@@ -837,6 +860,21 @@ _gsm_network_status_handler(GSource *source, GHashTable *status, gpointer data)
 	}
 }
 
+static void
+_startup_check()
+{
+	time_t now;
+
+	if (startup_time == -1) {
+		return;
+	}
+
+	now = time(NULL);
+	if (now - startup_time > inhibit_suspend_on_startup_time) {
+		g_debug("Startup phase ended - Suspend enabled");
+		startup_time = -1;
+	}
+}
 
 /* call management */
 static void
