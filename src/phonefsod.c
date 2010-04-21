@@ -38,8 +38,9 @@
 #include <glib/gstdio.h>
 #include <glib-object.h>
 #include <glib/gthread.h>
+#include <dbus/dbus-glib.h>
 
-#include <frameworkd-glib/frameworkd-glib-dbus.h>
+#include <fsoframework.h>
 
 #include "phonefsod-dbus.h"
 #include "phonefsod-fso.h"
@@ -181,6 +182,16 @@ _load_config()
 					"offline_mode", &error);
 		if (error) {
 			offline_mode = FALSE;
+			g_error_free(error);
+			error = NULL;
+		}
+
+		inhibit_suspend_on_startup_time =
+			g_key_file_get_integer(keyfile, "gsm",
+					       "inhibit_suspend_on_startup_time",
+					       &error);
+		if (error) {
+			inhibit_suspend_on_startup_time = 360;
 			g_error_free(error);
 			error = NULL;
 		}
@@ -623,6 +634,29 @@ static gint _daemonize (gchar *pidfilename)
 	return (EXIT_SUCCESS);
 }
 
+static void
+_name_owner_changed(DBusGProxy *proxy, const char *name,
+		    const char *prev, const char *new, gpointer data)
+{
+	(void) proxy;
+	(void) data;
+	g_debug("NameOwnerChanged: %s / %s / %s", name, prev, new);
+	if (new && *new) {
+		if (!strcmp(name, FSO_FRAMEWORK_USAGE_ServiceDBusName)) {
+			fso_connect_usage();
+		}
+		else if (!strcmp(name, FSO_FRAMEWORK_GSM_ServiceDBusName)) {
+			fso_connect_gsm();
+		}
+		else if (!strcmp(name, FSO_FRAMEWORK_PIM_ServiceDBusName)) {
+			fso_connect_pim();
+		}
+		else if (!strcmp(name, FSO_FRAMEWORK_DEVICE_ServiceDBusName)) {
+			fso_connect_device();
+		}
+	}
+}
+
 /* Main Entry Point for this Daemon */
 extern int main (int argc, char *argv[])
 {
@@ -637,6 +671,7 @@ extern int main (int argc, char *argv[])
 	uid_t     effective_user_id = 0;
 	gint      rc = 0;
 	struct    passwd *userinfo = NULL;
+	DBusGProxy *dbus_proxy;
 
 	/* initialize threading and mainloop */
 	g_type_init();
@@ -684,46 +719,52 @@ extern int main (int argc, char *argv[])
 	/* become the requested user */
 	seteuid (effective_user_id);
 
-	/* block all signals */
-	sigfillset (&signal_set);
-	pthread_sigmask (SIG_BLOCK, &signal_set, NULL);
+	if (!i_debug) {
+		/* block all signals */
+		sigfillset (&signal_set);
+		pthread_sigmask (SIG_BLOCK, &signal_set, NULL);
 
-	/* create the signal handling thread */
-	sig_thread = g_thread_create ((GThreadFunc)_thread_handle_signals,
-			main_loop, TRUE, &gerror);
-	if (gerror != NULL) {
-		g_message("Create signal thread failed: %s", gerror->message);
-		g_error_free(gerror);
-		g_option_context_free(context);
-		g_main_loop_unref (main_loop);
-		exit (EXIT_FAILURE);
+		/* create the signal handling thread */
+		sig_thread = g_thread_create ((GThreadFunc)_thread_handle_signals,
+				main_loop, TRUE, &gerror);
+		if (gerror != NULL) {
+			g_message("Create signal thread failed: %s", gerror->message);
+			g_error_free(gerror);
+			g_option_context_free(context);
+			g_main_loop_unref (main_loop);
+			exit (EXIT_FAILURE);
+		}
 	}
 
 	_load_config();
 
+	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &gerror);
+	if (gerror) {
+		g_error("%d: %s", gerror->code, gerror->message);
+		g_error_free(gerror);
+		g_option_context_free(context);
+		g_main_loop_unref(main_loop);
+		exit(EXIT_FAILURE);
+	}
+
+	/* register for NameOwnerChanged */
+	dbus_proxy = dbus_g_proxy_new_for_name (system_bus,
+			DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS);
+	dbus_g_proxy_add_signal(dbus_proxy, "NameOwnerChanged", G_TYPE_STRING,
+				G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INVALID);
+
+	dbus_g_proxy_connect_signal(dbus_proxy, "NameOwnerChanged",
+				    G_CALLBACK(_name_owner_changed), NULL, NULL);
+
+
+	/* connect and init FSO */
+	if (!fso_init()) {
+		g_option_context_free(context);
+		g_main_loop_unref(main_loop);
+		exit(EXIT_FAILURE);
+	}
+
 	phonefsod_dbus_setup();
-
-	/* initialize libframeworkd-glib */
-	FrameworkdHandler *fwHandler = frameworkd_handler_new();
-	fwHandler->simAuthStatus = fso_sim_auth_status_handler;
-	fwHandler->simReadyStatus = fso_sim_ready_status_handler;
-	//fwHandler->simIncomingStoredMessage =
-	//	fso_sim_incoming_stored_message_handler;
-	fwHandler->callCallStatus = fso_call_status_handler;
-	fwHandler->deviceIdleNotifierState =
-		fso_device_idle_notifier_state_handler;
-	fwHandler->deviceInputEvent = fso_device_input_event_handler;
-	fwHandler->incomingUssd = fso_incoming_ussd_handler;
-
-	fwHandler->usageResourceAvailable =
-		fso_resource_available_handler;
-	fwHandler->usageResourceChanged = fso_resource_changed_handler;
-	fwHandler->networkStatus = fso_network_status_handler;
-	fwHandler->pimIncomingMessage = fso_incoming_message_handler;
-
-	frameworkd_handler_connect(fwHandler);
-
-	g_debug("connected to FSO");
 
 	//notify = inotify_init();
 	//inotify_add_watch(notify, PHONEFSOD_CONFIG, IN_MODIFY);
@@ -734,12 +775,14 @@ extern int main (int argc, char *argv[])
 	g_main_loop_run(main_loop);
 
 	/* Cleanup and exit */
-	trc = g_thread_join(sig_thread);
-	g_message("Signal thread was ended by a %s signal.",
-			g_strsignal(GPOINTER_TO_INT(trc)) );
+	if (!i_debug) {
+		trc = g_thread_join(sig_thread);
+		g_message("Signal thread was ended by a %s signal.",
+				g_strsignal(GPOINTER_TO_INT(trc)) );
 
-	pthread_sigmask (SIG_UNBLOCK, &signal_set, NULL);
-	g_option_context_free (context);
+		pthread_sigmask (SIG_UNBLOCK, &signal_set, NULL);
+		g_option_context_free (context);
+	}
 	g_main_loop_unref (main_loop);
 
 //	if (incoming_calls)

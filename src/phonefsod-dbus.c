@@ -39,13 +39,6 @@ phonefsod_dbus_setup()
 
 	g_debug("Setting up dbus server part");
 
-	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &error);
-	if (error) {
-		g_error("%d: %s", error->code, error->message);
-		g_error_free(error);
-		return;
-	}
-
 	/* Register the service name, the constant here are defined in dbus-glib-bindings.h */
 	driver_proxy = dbus_g_proxy_new_for_name (system_bus,
 						  DBUS_SERVICE_DBUS,
