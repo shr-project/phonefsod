@@ -654,7 +654,7 @@ _device_idle_notifier_state_handler(GSource *source,
 	(void) data;
 
 	/* while Display resource is requested nothing to do */
-	if (display_state) {
+	if (display_state && state != FREE_SMARTPHONE_DEVICE_IDLE_STATE_BUSY) {
 		g_debug("Not handling Idle while Display is requested");
 		return;
 	}
