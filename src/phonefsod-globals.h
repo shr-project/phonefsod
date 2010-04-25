@@ -17,7 +17,8 @@ enum IdleScreen {
 	IDLE_SCREEN_NEVER = 0,
 	IDLE_SCREEN_AUX = 1,
 	IDLE_SCREEN_LOCK = 2,
-	IDLE_SCREEN_PHONE = 4
+	IDLE_SCREEN_PHONE = 4,
+	IDLE_SCREEN_SUSPEND = 8
 } idle_screen;
 
 enum AutoSuspend {

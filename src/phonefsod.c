@@ -264,7 +264,7 @@ _load_config()
 					"idle_screen", &error);
 		if (error) {
 			g_debug("no idle_screen found in config - defaulting to lock,aux");
-			idle_screen = IDLE_SCREEN_LOCK | IDLE_SCREEN_AUX;
+			idle_screen = IDLE_SCREEN_LOCK | IDLE_SCREEN_AUX | IDLE_SCREEN_SUSPEND;
 			g_error_free(error);
 			error = NULL;
 		}
@@ -284,6 +284,10 @@ _load_config()
 				else if (strcmp(flags[i], "phone") == 0) {
 					g_debug("adding PHONE to idle_screen");
 					idle_screen |= IDLE_SCREEN_PHONE;
+				}
+				else if (strcmp(flags[i], "suspend") == 0) {
+					g_debug("adding SUSPEND to idle_screen");
+					idle_screen |= IDLE_SCREEN_SUSPEND;
 				}
 			}
 			g_strfreev(flags);

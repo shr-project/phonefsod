@@ -72,6 +72,7 @@ static void _get_power_status_callback(GSource *source, GAsyncResult *res, gpoin
 /* dbus signal handlers */
 static void _usage_resource_available_handler(GSource *source, char *resource, gboolean availability, gpointer data);
 static void _usage_resource_changed_handler(GSource *source, char *resource, gboolean state, GHashTable *attributes, gpointer data);
+static void _usage_system_action_handler(GSource* source, FreeSmartphoneUsageSystemAction action, gpointer data);
 static void _gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus status, gpointer data);
 static void _gsm_sim_ready_status_handler(GSource *source, gboolean status, gpointer data);
 static void _device_idle_notifier_state_handler(GSource *source, FreeSmartphoneDeviceIdleState state, gpointer data);
@@ -112,6 +113,8 @@ fso_connect_usage()
 				G_CALLBACK(_usage_resource_changed_handler), NULL);
 		g_signal_connect(G_OBJECT(fso.usage), "resource-available",
 				G_CALLBACK(_usage_resource_available_handler), NULL);
+		g_signal_connect(G_OBJECT(fso.usage), "system-action",
+				 G_CALLBACK(_usage_system_action_handler), NULL);
 		g_debug("Connected to FSO/Usage");
 	}
 }
@@ -417,7 +420,7 @@ _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data)
 
 	status = free_smartphone_device_power_supply_get_power_status_finish
 						(fso.power_supply, res, &error);
-
+	g_debug("PowerStatus is %d", status);
 	if (error == NULL && (status == FREE_SMARTPHONE_DEVICE_POWER_STATUS_AC ||
 		status == FREE_SMARTPHONE_DEVICE_POWER_STATUS_CHARGING)) {
 		g_debug("not suspending due to charging or battery full");
@@ -644,6 +647,18 @@ _usage_resource_changed_handler(GSource *source, char *name, gboolean state,
 	}
 }
 
+static void
+_usage_system_action_handler(GSource *source,
+			     FreeSmartphoneUsageSystemAction action,
+			     gpointer data)
+{
+	g_debug("SystemAction: %d", action);
+	/* show the IdleScreen if configured to do so on suspend */
+	if (action == FREE_SMARTPHONE_USAGE_SYSTEM_ACTION_SUSPEND &&
+		idle_screen & IDLE_SCREEN_SUSPEND)  {
+		phoneuid_idle_screen_show();
+	}
+}
 
 static void
 _device_idle_notifier_state_handler(GSource *source,
