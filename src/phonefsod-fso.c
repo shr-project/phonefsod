@@ -446,170 +446,12 @@ _get_idle_state_callback(GSource *source, GAsyncResult *res, gpointer data)
 		g_error_free(error);
 		return;
 	}
+	g_debug("Current IdleState is %s",
+		free_smartphone_device_idle_state_to_string(state));
 	if (state == FREE_SMARTPHONE_DEVICE_IDLE_STATE_SUSPEND) {
 		_fso_suspend();
 	}
 }
-#if 0
-static void
-_gsm_sim_auth_status_cb(GSource *source, GAsyncResult *res, gpointer data)
-{
-	GError *error = NULL;
-	FreeSmartphoneGSMSIMAuthStatus status;
-
-	status = free_smartphone_gsm_sim_get_auth_status_finish
-			(FREE_SMARTPHONE_GSM_SIM(fso.gsm_sim), res, &error);
-
-	g_debug("sim_auth_status_callback(%s,status=%d)",
-		error ? "ERROR" : "OK", status);
-
-	/* if no SIM is present inform the user about it and
-	 * stop retrying to authenticate the SIM */
-	if (error->domain == FREE_SMARTPHONE_GSM_ERROR &&
-		error->code = FREE_SMARTPHONE_GSM_ERROR_SIM_NOT_PRESENT) {
-		g_message("SIM card not present.");
-		phoneuid_notification_show_dialog(PHONEUI_DIALOG_SIM_NOT_PRESENT);
-		return;
-	}
-
-	/* on any other error just reschedule a retry */
-	if (error || status == FREE_SMARTPHONE_GSM_SIM_AUTH_STATUS_UNKNOWN) {
-		g_debug("... got error: %s", error->message);
-		g_timeout_add(5000, _fso_get_auth_status, NULL);
-		return;
-	}
-
-	if (status != FREE_SMARTPHONE_GSM_SIM_AUTH_STATUS_READY) {
-		g_debug("... needs authentication");
-		phoneuid_notification_show_sim_auth(status);
-		return;
-	}
-
-	g_debug("SIM authenticated");
-	fso_register_network(NULL);
-	free_smartphone_gsm_sim_get_sim_ready(FREE_SMARTPHONE_GSM_SIM(fso_gsm_sim),
-					      _sim_ready_status_cb, NULL);
-}
-
-static void
-_set_antenna_power_callback(GSource *source, GAsyncResult *res, gpointer userdata)
-{
-	GError *error = NULL;
-	g_debug("_set_antenna_power_callback()");
-	free_smartphone_gsm_device_set_antenna_power_finish(
-			FREE_SMARTPHONE_GSM_DEVICE(source), res &error);
-	if (error != NULL) {#
-		if (error->domain === FREE_SMARTPHONE_GSM_ERROR) {
-			switch (error->code) {
-			case FREE_SMARTPHONE_GSM_ERROR_SIM_AUTH_FAILED:
-				/*
-				* This auth status query is needed for startup when
-				* there's no auth status signal emitted
-				*/
-				fso_get_auth_status();
-				return;
-			case FREE_SMARTPHONE_GSM_ERROR_SIM_NOT_PRESENT:
-				g_message("SIM card not present.");
-				phoneuid_notification_show_dialog(
-					PHONEUI_DIALOG_SIM_NOT_PRESENT);
-				return;
-			case FREE_SMARTPHONE_GSM_ERROR_DEVICE_FAILED: // FIXME: check which is the correct one
-				/* this smells like new fsogsmd -
-				use SetFunctionality instead */
-				ogsmd_device_set_functionality("full", TRUE, "",
-						_set_functionality_callback, NULL);
-				break;
-		}
-		else if (IS_RESOURCE_ERROR(error, RESOURCE_ERROR_NOT_ENABLED)) {
-			g_message("GSM is not yet enabled, try again in 1s");
-			g_timeout_add(1000, fso_set_antenna_power, NULL);
-			return;
-		}
-		else if (IS_FRAMEWORKD_GLIB_DBUS_ERROR
-			 (error,
-			  FRAMEWORKD_GLIB_DBUS_ERROR_SERVICE_NOT_AVAILABLE)
-			 || IS_FRAMEWORKD_GLIB_DBUS_ERROR(error,
-							  FRAMEWORKD_GLIB_DBUS_ERROR_NO_REPLY)
-			) {
-			g_debug("dbus not available, try again in 5s");
-			g_timeout_add(5000, fso_set_antenna_power, NULL);
-			return;
-		}
-		else {
-			g_debug("Unknown error: %s %s %d", error->message,
-				g_quark_to_string(error->domain), error->code);
-			g_timeout_add(5000, fso_set_antenna_power, NULL);
-			return;
-		}
-	}
-}
-
-gboolean
-fso_get_auth_status()
-{
-	g_debug("getting SIM auth status...");
-	ogsmd_sim_get_auth_status(_sim_auth_status_callback, NULL);
-	return (FALSE);
-}
-
-/* --- stuff happening when the SIM has ready status --- */
-
-void
-_get_messagebook_info_callback(GError * error, GHashTable * info,
-			      gpointer userdata)
-{
-	g_debug("_get_messagebook_info_callback()");
-	if (error == NULL && info != NULL) {
-		gpointer p = NULL;
-		int first = 0, last = 0, used = 0, total = 0;
-
-		if ((p = g_hash_table_lookup(info, "first")) != NULL)
-			first = g_value_get_int(p);
-		else
-			g_debug("get_messagebok_info_callback(): No value for \"first\"");
-
-		if ((p = g_hash_table_lookup(info, "last")) != NULL)
-			last = g_value_get_int(p);
-		else
-			g_debug("get_messagebok_info_callback(): No value for \"last\"");
-
-		if ((p = g_hash_table_lookup(info, "used")) != NULL)
-			used = g_value_get_int(p);
-		else
-			g_debug("get_messagebok_info_callback(): No value for \"used\"");
-
-		total = last - first + 1;
-		g_debug("messagebook info: first: %d, last %d, used: %d, total %d", first, last, used, total);
-		if (used == total) {
-			phoneuid_notification_show_dialog(
-					PHONEUI_DIALOG_MESSAGE_STORAGE_FULL);
-		}
-	}
-	else if (error) {
-		g_debug("MessageBookInfo failed: %s %s %d", error->message,
-			g_quark_to_string(error->domain), error->code);
-		/* TODO */
-	}
-	else {
-		g_debug("we got neither an error nor the messagebook info?");
-	}
-	g_debug("_get_messagebook_info_callback done");
-}
-
-
-
-
-void
-fso_sim_ready_actions(void)
-{
-	g_debug("sim ready");
-	sim_ready = TRUE;
-	ogsmd_sim_get_messagebook_info(_get_messagebook_info_callback, NULL);
-}
-
-
-#endif
-
 
 /* dbus signal handlers */
 static void
@@ -913,6 +755,7 @@ _stop_startup()
 	/* we have to check the current idle state... and if it is suspend
 	then we have to suspend... otherwise it would never suspend without
 	touching the screen */
+	g_debug("Getting current IdleState to see if we have to suspend");
 	free_smartphone_device_idle_notifier_get_state(fso.idle_notifier,
 						_get_idle_state_callback, NULL);
 }
