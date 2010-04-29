@@ -57,6 +57,7 @@ static gboolean display_state = FALSE;
 static gboolean _fso_list_resources();
 static gboolean _fso_request_gsm();
 static void _fso_suspend();
+static void _stop_startup();
 static void _startup_check();
 
 /* dbus method callbacks */
@@ -68,6 +69,7 @@ static void _gsm_sim_ready_status_callback(GSource *source, GAsyncResult *res, g
 static void _gsm_sim_auth_status_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data);
+static void _get_idle_state_callback(GSource *source, GAsyncResult *res, gpointer data);
 
 /* dbus signal handlers */
 static void _usage_resource_available_handler(GSource *source, char *resource, gboolean availability, gpointer data);
@@ -217,7 +219,8 @@ fso_startup()
 {
 	g_debug("FSO starting up");
 	if (!offline_mode) {
-		g_debug("Inhibiting suspend during startup phase");
+		g_message("Inhibiting suspend during startup phase (max %ds)",
+			  inhibit_suspend_on_startup_time);
 		startup_time = time(NULL);
 	}
 	_fso_list_resources();
@@ -256,7 +259,7 @@ gboolean
 fso_set_functionality()
 {
 	if (offline_mode) {
-		startup_time = -1;
+		_stop_startup();
 		free_smartphone_gsm_device_set_functionality
 			(fso.gsm_device, "airplane", FALSE, "",
 			(GAsyncReadyCallback)_set_functionality_callback, NULL);
@@ -407,7 +410,6 @@ _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data)
 		_startup_check();
 		return;
 	}
-	startup_time = -1;
 }
 
 static void
@@ -429,7 +431,25 @@ _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data)
 	free_smartphone_usage_suspend(fso.usage, NULL, NULL);
 }
 
+static void
+_get_idle_state_callback(GSource *source, GAsyncResult *res, gpointer data)
+{
+	(void) source;
+	(void) data;
+	GError *error = NULL;
+	FreeSmartphoneDeviceIdleState state;
 
+	state = free_smartphone_device_idle_notifier_get_state_finish
+					(fso.idle_notifier, res, &error);
+	if (error) {
+		g_warning("IdleState error: (%d) %s", error->code, error->message);
+		g_error_free(error);
+		return;
+	}
+	if (state == FREE_SMARTPHONE_DEVICE_IDLE_STATE_SUSPEND) {
+		_fso_suspend();
+	}
+}
 #if 0
 static void
 _gsm_sim_auth_status_cb(GSource *source, GAsyncResult *res, gpointer data)
@@ -860,20 +880,41 @@ _gsm_network_status_handler(GSource *source, GHashTable *status, gpointer data)
 		g_debug("got no status from NetworkStatus?!");
 		return;
 	}
+
+	/* right now we use this signal only to check if it registered on startup
+	to reset the startup time... nothing to do if it is already reset */
+	if (startup_time == -1) {
+		return;
+	}
+
 	GValue *tmp = g_hash_table_lookup(status, "registration");
 	if (tmp) {
 		const char *registration = g_value_get_string(tmp);
 		g_debug("fso_network_status_handler(registration=%s)",
 				registration);
-/*		if (!strcmp(registration, "unregistered")) {
-			g_message("scheduling registration to network");
-			g_timeout_add(gsm_reregister_timeout * 1000,
-					fso_register_network, NULL);
-		}*/
+		if (strcmp(registration, "unregistered")) {
+			g_message("Ending startup phase due to successfull registration");
+			_stop_startup();
+			return;
+		}
 	}
 	else {
 		g_debug("got NetworkStatus without registration?!?");
 	}
+
+	_startup_check();
+}
+
+static void
+_stop_startup()
+{
+	startup_time = -1;
+
+	/* we have to check the current idle state... and if it is suspend
+	then we have to suspend... otherwise it would never suspend without
+	touching the screen */
+	free_smartphone_device_idle_notifier_get_state(fso.idle_notifier,
+						_get_idle_state_callback, NULL);
 }
 
 static void
@@ -887,8 +928,8 @@ _startup_check()
 
 	now = time(NULL);
 	if (now - startup_time > inhibit_suspend_on_startup_time) {
-		g_debug("Startup phase ended - Suspend enabled");
-		startup_time = -1;
+		g_message("Ending startup phase due to time out");
+		_stop_startup();
 	}
 }
 
