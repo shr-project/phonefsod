@@ -67,9 +67,10 @@ static void _going_offline_callback(GSource *source, GAsyncResult *res, gpointer
 static void _going_online_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _gsm_sim_ready_status_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _gsm_sim_auth_status_callback(GSource *source, GAsyncResult *res, gpointer data);
+static void _gsm_sim_sim_info_callback(GObject *source, GAsyncResult *res, gpointer data);
 static void _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _get_idle_state_callback(GSource *source, GAsyncResult *res, gpointer data);
+static void _get_idle_state_callback(GObject *source, GAsyncResult *res, gpointer data);
 
 /* dbus signal handlers */
 static void _usage_resource_available_handler(GSource *source, char *resource, gboolean availability, gpointer data);
@@ -432,7 +433,7 @@ _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data)
 }
 
 static void
-_get_idle_state_callback(GSource *source, GAsyncResult *res, gpointer data)
+_get_idle_state_callback(GObject* source, GAsyncResult* res, gpointer data)
 {
 	(void) source;
 	(void) data;
