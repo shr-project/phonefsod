@@ -144,8 +144,6 @@ fso_connect_gsm()
 		g_debug("Connected to FSO/GSM/SIM");
 		g_signal_connect(G_OBJECT(fso.gsm_sim), "auth-status",
 				G_CALLBACK(_gsm_sim_auth_status_handler), NULL);
-/*		g_signal_connect(G_OBJECT(fso.gsm_sim), "ready-status",
-				G_CALLBACK(_gsm_sim_ready_status_handler), NULL);*/
 	}
 
 	fso.gsm_network = free_smartphone_gsm_get_network_proxy(system_bus,
@@ -282,10 +280,8 @@ fso_set_functionality()
 static gboolean
 _fso_list_resources()
 {
-	g_debug("_fso_list_resources");
 	free_smartphone_usage_list_resources(fso.usage,
 			(GAsyncReadyCallback)_list_resources_callback, NULL);
-	g_debug("_fso_list_resources (done)");
 	return FALSE;
 }
 
@@ -753,14 +749,6 @@ _gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus sta
 	else {
 		phoneuid_notification_show_sim_auth(status);
 	}
-}
-
-static void
-_gsm_sim_ready_status_handler(GSource *source, gboolean status, gpointer data)
-{
-	g_debug("fso_sim_ready_status_handler(%s)", status ? "ready" : "NOT ready");
-/*	if (status)
-		fso_sim_ready_actions();*/
 }
 
 static void
