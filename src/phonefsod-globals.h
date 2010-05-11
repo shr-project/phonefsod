@@ -6,12 +6,16 @@ gboolean offline_mode;
 int inhibit_suspend_on_startup_time;
 gboolean show_incoming_sms;
 int gsm_reregister_timeout;
+char *pdp_apn;
+char *pdp_user;
+char *pdp_password;
 
 int default_brightness;
 int minimum_brightness;
 int dim_idle_percent;
 int dim_idle_dim_percent;
 int dim_idle_prelock_percent;
+
 
 enum IdleScreen {
 	IDLE_SCREEN_NEVER = 0,

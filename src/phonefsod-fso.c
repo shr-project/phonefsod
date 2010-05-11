@@ -22,6 +22,7 @@ struct _fso {
 	FreeSmartphoneGSMCall *gsm_call;
 	FreeSmartphoneGSMDevice *gsm_device;
 	FreeSmartphoneGSMNetwork *gsm_network;
+	FreeSmartphoneGSMPDP *gsm_pdp;
 	FreeSmartphoneDeviceIdleNotifier *idle_notifier;
 	FreeSmartphoneDeviceInput *input;
 	FreeSmartphoneDeviceDisplay *display;
@@ -150,6 +151,10 @@ fso_connect_gsm()
 		g_debug("Connected to FSO/GSM/Network");
 	}
 
+	fso.gsm_pdp = free_smartphone_gsm_get_p_d_p_proxy(system_bus,
+				FSO_FRAMEWORK_GSM_ServiceDBusName,
+				FSO_FRAMEWORK_GSM_DeviceServicePath);
+
 	fso.gsm_call = free_smartphone_gsm_get_call_proxy(system_bus,
 				FSO_FRAMEWORK_GSM_ServiceDBusName,
 				FSO_FRAMEWORK_GSM_DeviceServicePath);
@@ -269,6 +274,15 @@ fso_set_functionality()
 	return FALSE;
 }
 
+void
+fso_pdp_set_credentials()
+{
+	if (!pdp_apn || !pdp_user || !pdp_password)
+		return;
+
+	free_smartphone_gsm_pdp_set_credentials
+		(fso.gsm_pdp, pdp_apn, pdp_user, pdp_password, NULL, NULL);
+}
 
 static gboolean
 _fso_list_resources()
@@ -725,6 +739,7 @@ _gsm_device_status_handler(GSource *source,
 		/* FIXME: due to a race somewhere in fsogsmd we have to delay
 		the call to GetSimInfo... remove when fixed */
 		g_debug("SIM is alive-sim-ready");
+		fso_pdp_set_credentials();
 		_get_sim_info(NULL);
 // 		g_timeout_add_seconds(30, _get_sim_info, NULL);
 	}

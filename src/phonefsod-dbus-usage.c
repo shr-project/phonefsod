@@ -107,6 +107,43 @@ _write_default_brightness_to_config(void)
 }
 
 static void
+_write_pdp_credentials_to_config(void)
+{
+	GError *error = NULL;
+	GKeyFile *keyfile;
+	GKeyFileFlags flags;
+	gsize size;
+	char *config_data;
+
+	keyfile = g_key_file_new();
+	flags = G_KEY_FILE_KEEP_COMMENTS | G_KEY_FILE_KEEP_TRANSLATIONS;
+	if (g_key_file_load_from_file
+	    (keyfile, PHONEFSOD_CONFIG, flags, &error)) {
+		g_key_file_set_string(keyfile, "gsm", "pdp_apn", pdp_apn);
+		g_key_file_set_string(keyfile, "gsm", "pdp_user", pdp_user);
+		g_key_file_set_string(keyfile, "gsm", "pdp_password", pdp_password);
+		config_data = g_key_file_to_data(keyfile, &size, NULL);
+		if (!config_data) {
+			g_message("could not convert config data to write \
+					default brightness to config");
+		}
+		else {
+			if (!g_file_set_contents(PHONEFSOD_CONFIG, config_data,
+					size, &error))
+			{
+				g_warning("failed writing pdp credentials \
+					to config: %s", error->message);
+				g_error_free(error);
+			}
+			g_free(config_data);
+		}
+	}
+
+	if (keyfile)
+		g_key_file_free(keyfile);
+}
+
+static void
 phonefsod_usage_service_class_init(PhonefsodUsageServiceClass * klass)
 {
 	GError *error = NULL;
@@ -293,4 +330,28 @@ phonefsod_usage_service_get_default_brightness(PhonefsodUsageService *object,
 					       DBusGMethodInvocation *context)
 {
 	dbus_g_method_return(context, default_brightness);
+}
+
+void
+phonefsod_usage_service_set_pdp_credentials(PhonefsodUsageService* object,
+					    const char *apn,
+					    const char *user,
+					    const char *password,
+					    DBusGMethodInvocation* context)
+{
+	if (pdp_apn) {
+		free(pdp_apn);
+	}
+	pdp_apn = strdup(apn);
+	if (pdp_user) {
+		free(pdp_user);
+	}
+	pdp_user = strdup(user);
+	if (pdp_password) {
+		free(pdp_password);
+	}
+	pdp_password = strdup(password);
+	_write_pdp_credentials_to_config();
+	fso_pdp_set_credentials();
+	dbus_g_method_return(context);
 }

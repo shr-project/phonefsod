@@ -68,6 +68,13 @@ void
 phonefsod_usage_service_get_default_brightness(PhonefsodUsageService *object,
 					       DBusGMethodInvocation *context);
 
+void
+phonefsod_usage_service_set_pdp_credentials(PhonefsodUsageService *object,
+					    const char *apn,
+					    const char *user,
+					    const char *password,
+					    DBusGMethodInvocation *context);
+
 PhonefsodUsageService *phonefsod_usage_service_new(void);
 
 #endif

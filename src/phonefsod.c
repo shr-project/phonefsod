@@ -219,6 +219,25 @@ _load_config()
 			gsm_reregister_timeout = MINIMUM_GSM_REREGISTER_TIMEOUT;
 		}
 
+		pdp_apn = g_key_file_get_string(keyfile, "gsm",
+						"pdp_apn", &error);
+		if (error) {
+			g_error_free(error);
+			error = NULL;
+		}
+		pdp_user = g_key_file_get_string(keyfile, "gsm",
+						 "pdp_user", &error);
+		if (error) {
+			g_error_free(error);
+			error = NULL;
+		}
+		pdp_password = g_key_file_get_string(keyfile, "gsm",
+						     "pdp_password", &error);
+		if (error) {
+			g_error_free(error);
+			error = NULL;
+		}
+
 		/* --- [idle] --- */
 		default_brightness =
 			g_key_file_get_integer(keyfile, "idle",
