@@ -14,6 +14,8 @@
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
 
+#define MIN_SIM_SLOTS_FREE 1
+
 struct _fso {
 	FreeSmartphoneUsage *usage;
 	FreeSmartphoneGSMSIM * gsm_sim;
@@ -78,6 +80,7 @@ static void _usage_resource_changed_handler(GSource *source, char *resource, gbo
 static void _usage_system_action_handler(GSource* source, FreeSmartphoneUsageSystemAction action, gpointer data);
 static void _gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus status, gpointer data);
 static void _gsm_sim_ready_status_handler(GSource *source, gboolean status, gpointer data);
+static void _gsm_device_status_handler(GSource *source, FreeSmartphoneGSMDeviceStatus status, gpointer data);
 static void _device_idle_notifier_state_handler(GSource *source, FreeSmartphoneDeviceIdleState state, gpointer data);
 static void _device_input_event_handler(GSource *source, char *src, FreeSmartphoneDeviceInputState state, int duration, gpointer data);
 static void _gsm_call_status_handler(GSource *source, int call_id, int status, GHashTable *properties, gpointer data);
@@ -130,6 +133,8 @@ fso_connect_gsm()
 				FSO_FRAMEWORK_GSM_DeviceServicePath);
 	if (fso.gsm_device) {
 		g_debug("Connected to FSO/GSM/Device");
+		g_signal_connect(fso.gsm_device, "device-status",
+				 G_CALLBACK(_gsm_device_status_handler), NULL);
 	}
 
 	fso.gsm_sim = free_smartphone_gsm_get_s_i_m_proxy(system_bus,
@@ -454,6 +459,44 @@ _get_idle_state_callback(GObject* source, GAsyncResult* res, gpointer data)
 	}
 }
 
+static void
+_gsm_sim_sim_info_callback(GObject* source, GAsyncResult* res, gpointer data)
+{
+	(void) source;
+	(void) data;
+	GError *error = NULL;
+	GHashTable *info;
+	int slots_total = 0, slots_used = 0;
+	GValue *gval_tmp;
+
+	info = free_smartphone_gsm_sim_get_sim_info_finish(fso.gsm_sim, res, &error);
+	if (error) {
+		g_warning("Failed getting SIM info: (%d) %s",
+			  error->code, error->message);
+		g_error_free(error);
+		return;
+	}
+	gval_tmp = g_hash_table_lookup(info, "slots");
+	if (gval_tmp) {
+		slots_total = g_value_get_int(gval_tmp);
+	}
+	gval_tmp = g_hash_table_lookup(info, "used");
+	if (gval_tmp) {
+		slots_used = g_value_get_int(gval_tmp);
+	}
+	if (slots_total - slots_used < MIN_SIM_SLOTS_FREE) {
+		g_message("No more free slots for messages on SIM!");
+		phoneuid_notification_show_dialog
+					(PHONEUI_DIALOG_MESSAGE_STORAGE_FULL);
+	}
+	else {
+		g_debug("SIM has %d free slots for messages",
+			slots_total - slots_used);
+	}
+	g_hash_table_unref(info);
+}
+
+
 /* dbus signal handlers */
 static void
 _usage_resource_available_handler(GSource *source, char *name,
@@ -667,6 +710,35 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 	}
 }
 
+static gboolean
+_get_sim_info(gpointer foo)
+{
+	(void) foo;
+	g_debug("_get_sim_info");
+	free_smartphone_gsm_sim_get_sim_info
+			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
+	return FALSE;
+}
+
+static void
+_gsm_device_status_handler(GSource *source,
+			   FreeSmartphoneGSMDeviceStatus status,
+			   gpointer data)
+{
+	if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_NO_SIM) {
+		phoneuid_notification_show_dialog(PHONEUI_DIALOG_SIM_NOT_PRESENT);
+	}
+	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_LOCKED) {
+		phoneuid_notification_show_sim_auth(status);
+	}
+	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_READY) {
+		/* FIXME: due to a race somewhere in fsogsmd we have to delay
+		the call to GetSimInfo... remove when fixed */
+		g_debug("SIM is alive-sim-ready");
+		_get_sim_info(NULL);
+// 		g_timeout_add_seconds(30, _get_sim_info, NULL);
+	}
+}
 
 /* --- AuthStatus --- */
 static void
