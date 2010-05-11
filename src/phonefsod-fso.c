@@ -68,7 +68,6 @@ static void _request_resource_callback(GSource *source, GAsyncResult *res, gpoin
 static void _going_offline_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _going_online_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _gsm_sim_ready_status_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _gsm_sim_auth_status_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _gsm_sim_sim_info_callback(GObject *source, GAsyncResult *res, gpointer data);
 static void _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data);
 static void _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data);
@@ -78,7 +77,6 @@ static void _get_idle_state_callback(GObject *source, GAsyncResult *res, gpointe
 static void _usage_resource_available_handler(GSource *source, char *resource, gboolean availability, gpointer data);
 static void _usage_resource_changed_handler(GSource *source, char *resource, gboolean state, GHashTable *attributes, gpointer data);
 static void _usage_system_action_handler(GSource* source, FreeSmartphoneUsageSystemAction action, gpointer data);
-static void _gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus status, gpointer data);
 static void _gsm_sim_ready_status_handler(GSource *source, gboolean status, gpointer data);
 static void _gsm_device_status_handler(GSource *source, FreeSmartphoneGSMDeviceStatus status, gpointer data);
 static void _device_idle_notifier_state_handler(GSource *source, FreeSmartphoneDeviceIdleState state, gpointer data);
@@ -140,11 +138,6 @@ fso_connect_gsm()
 	fso.gsm_sim = free_smartphone_gsm_get_s_i_m_proxy(system_bus,
 				FSO_FRAMEWORK_GSM_ServiceDBusName,
 				FSO_FRAMEWORK_GSM_DeviceServicePath);
-	if (fso.gsm_sim) {
-		g_debug("Connected to FSO/GSM/SIM");
-		g_signal_connect(G_OBJECT(fso.gsm_sim), "auth-status",
-				G_CALLBACK(_gsm_sim_auth_status_handler), NULL);
-	}
 
 	fso.gsm_network = free_smartphone_gsm_get_network_proxy(system_bus,
 				FSO_FRAMEWORK_GSM_ServiceDBusName,
@@ -734,21 +727,6 @@ _gsm_device_status_handler(GSource *source,
 		g_debug("SIM is alive-sim-ready");
 		_get_sim_info(NULL);
 // 		g_timeout_add_seconds(30, _get_sim_info, NULL);
-	}
-}
-
-/* --- AuthStatus --- */
-static void
-_gsm_sim_auth_status_handler(GSource *source, FreeSmartphoneGSMSIMAuthStatus status, gpointer data)
-{
-	(void) data;
-	(void) source;
-	g_debug("_gsm_sim_auth_status_handler(status=%d)", status);
-	if (status == FREE_SMARTPHONE_GSM_SIM_AUTH_STATUS_READY) {
-		g_debug("sim auth ready");
-	}
-	else {
-		phoneuid_notification_show_sim_auth(status);
 	}
 }
 
