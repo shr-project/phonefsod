@@ -714,16 +714,6 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 	}
 }
 
-static gboolean
-_get_sim_info(gpointer foo)
-{
-	(void) foo;
-	g_debug("_get_sim_info");
-	free_smartphone_gsm_sim_get_sim_info
-			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
-	return FALSE;
-}
-
 static void
 _gsm_device_status_handler(GSource *source,
 			   FreeSmartphoneGSMDeviceStatus status,
@@ -736,12 +726,10 @@ _gsm_device_status_handler(GSource *source,
 		phoneuid_notification_show_sim_auth(status);
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_READY) {
-		/* FIXME: due to a race somewhere in fsogsmd we have to delay
-		the call to GetSimInfo... remove when fixed */
 		g_debug("SIM is alive-sim-ready");
 		fso_pdp_set_credentials();
-		_get_sim_info(NULL);
-// 		g_timeout_add_seconds(30, _get_sim_info, NULL);
+		free_smartphone_gsm_sim_get_sim_info
+			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
 	}
 }
 
@@ -750,10 +738,13 @@ _pim_incoming_message_handler(GSource *source, char *message_path, gpointer data
 {
 	(void) source;
 	(void) data;
-	g_debug("fso_incoming_message_handler()");
-	if (show_incoming_sms)
+	g_debug("fso_incoming_message_handler(%s)", message_path);
+	if (show_incoming_sms) {
 		phoneuid_messages_display_message(message_path);
-// 	ogsmd_sim_get_messagebook_info(_get_messagebook_info_callback, NULL);
+	}
+	/* check if there is still a free slot for the next SMS */
+	free_smartphone_gsm_sim_get_sim_info
+				(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
 }
 
 static void
