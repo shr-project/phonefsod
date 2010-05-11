@@ -410,6 +410,7 @@ _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data)
 	if (error) {
 		g_warning("SetFunctionality gave an error: %s", error->message);
 		_startup_check();
+		g_error_free(error);
 		return;
 	}
 }
