@@ -44,7 +44,6 @@ typedef struct {
 } call_t;
 
 
-static gboolean sim_auth_active = FALSE;
 static gboolean sim_ready = FALSE;
 static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
@@ -95,6 +94,8 @@ static void _call_remove(call_t ** calls, int *size, int id);
 gboolean
 fso_init()
 {
+	sim_auth_needed = FALSE;
+
 	fso_connect_usage();
 	fso_connect_gsm();
 	fso_connect_pim();
@@ -723,10 +724,12 @@ _gsm_device_status_handler(GSource *source,
 		phoneuid_notification_show_dialog(PHONEUI_DIALOG_SIM_NOT_PRESENT);
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_LOCKED) {
+		sim_auth_needed = TRUE;
 		phoneuid_notification_show_sim_auth(status);
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_READY) {
 		g_debug("SIM is alive-sim-ready");
+		sim_auth_needed = FALSE;
 		fso_pdp_set_credentials();
 		free_smartphone_gsm_sim_get_sim_info
 			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);

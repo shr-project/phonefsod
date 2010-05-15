@@ -43,6 +43,7 @@
 #include <fsoframework.h>
 
 #include "phonefsod-dbus.h"
+#include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
 
@@ -665,7 +666,11 @@ _name_owner_changed(DBusGProxy *proxy, const char *name,
 	(void) data;
 	g_debug("NameOwnerChanged: %s / %s / %s", name, prev, new);
 	if (new && *new) {
-		if (!strcmp(name, FSO_FRAMEWORK_USAGE_ServiceDBusName)) {
+		if (sim_auth_needed && !strcmp(name, "org.shr.phoneui")) {
+			phoneuid_notification_show_sim_auth(0);
+			sim_auth_needed = FALSE;
+		}
+/*		if (!strcmp(name, FSO_FRAMEWORK_USAGE_ServiceDBusName)) {
 			fso_connect_usage();
 		}
 		else if (!strcmp(name, FSO_FRAMEWORK_GSM_ServiceDBusName)) {
@@ -676,7 +681,7 @@ _name_owner_changed(DBusGProxy *proxy, const char *name,
 		}
 		else if (!strcmp(name, FSO_FRAMEWORK_DEVICE_ServiceDBusName)) {
 			fso_connect_device();
-		}
+		}*/
 	}
 }
 
