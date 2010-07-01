@@ -321,7 +321,7 @@ phonefsod_usage_service_set_default_brightness(PhonefsodUsageService *object,
 {
 	default_brightness = brightness;
 	_write_default_brightness_to_config();
-	fso_dimit(100);
+	fso_dimit(100, DIM_SCREEN_ALWAYS);
 	dbus_g_method_return(context);
 }
 

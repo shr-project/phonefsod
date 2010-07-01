@@ -10,7 +10,7 @@ void fso_connect_pim();
 void fso_connect_device();
 
 gboolean fso_startup();
-void fso_dimit(int percent);
+void fso_dimit(int percent, int dim);
 void fso_get_resource_state(const char *resource, void (*callback)(GError *, gboolean, gpointer), gpointer data);
 gboolean fso_set_functionality();
 void fso_pdp_set_credentials();

@@ -18,6 +18,12 @@ int dim_idle_dim_percent;
 int dim_idle_prelock_percent;
 
 
+enum DimScreen {
+	DIM_SCREEN_NEVER,
+	DIM_SCREEN_ONBAT,
+	DIM_SCREEN_ALWAYS
+} dim_screen;
+
 enum IdleScreen {
 	IDLE_SCREEN_NEVER = 0,
 	IDLE_SCREEN_AUX = 1,

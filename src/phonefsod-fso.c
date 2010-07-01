@@ -227,18 +227,13 @@ fso_startup()
 		startup_time = time(NULL);
 	}
 	_fso_list_resources();
-	fso_dimit(100);
+	fso_dimit(100, DIM_SCREEN_ALWAYS);
 	return FALSE;
 }
 
-void
-fso_dimit(int percent)
+static void
+_fso_dim_screen(int percent)
 {
-	g_debug("fso_dimit(%d)", percent);
-	/* -1 means dimming disabled */
-	if (percent < 0)
-		return;
-
 	int b = default_brightness * percent / 100;
 	if (b > 100) {
 		b = 100;
@@ -255,7 +250,44 @@ fso_dimit(int percent)
 	else {
 		phoneuid_idle_screen_deactivate_screensaver();
 	}
-	g_debug("fso_dimit(%d) (done)", percent);
+}
+
+static void
+_get_power_status_for_dimming_callback(GSource *source, GAsyncResult *res,
+				       gpointer data)
+{
+	(void) source;
+	GError *error = NULL;
+	FreeSmartphoneDevicePowerStatus status;
+
+	status = free_smartphone_device_power_supply_get_power_status_finish
+						(fso.power_supply, res, &error);
+	g_debug("PowerStatus is %d", status);
+	if (error == NULL && (status == FREE_SMARTPHONE_DEVICE_POWER_STATUS_AC ||
+		status == FREE_SMARTPHONE_DEVICE_POWER_STATUS_CHARGING)) {
+		g_debug("not suspending due to charging or battery full");
+		return;
+	}
+	_fso_dim_screen(GPOINTER_TO_INT(data));
+}
+
+void
+fso_dimit(int percent, int dim)
+{
+	/* -1 means dimming disabled */
+	if (dim == DIM_SCREEN_NEVER || percent < 0)
+		return;
+
+	/* for dimming only on bat we have to check
+	 * if power is plugged in */
+	if (dim == DIM_SCREEN_ONBAT) {
+		free_smartphone_device_power_supply_get_power_status
+			(fso.power_supply,
+			_get_power_status_for_dimming_callback,
+			 GINT_TO_POINTER(percent));
+		return;
+	}
+	_fso_dim_screen(percent);
 }
 
 gboolean
@@ -553,7 +585,7 @@ _usage_resource_changed_handler(GSource *source, char *name, gboolean state,
 		/* if something requests the Display resource
 		we have * to undim it */
 		if (display_state) {
-			fso_dimit(100);
+			fso_dimit(100, DIM_SCREEN_ALWAYS);
 		}
 	}
 }
@@ -586,16 +618,16 @@ _device_idle_notifier_state_handler(GSource *source,
 	}
 	switch (state) {
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_BUSY:
-		fso_dimit(100);
+		fso_dimit(100, dim_screen);
 		break;
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_IDLE:
-		fso_dimit(dim_idle_percent);
+		fso_dimit(dim_idle_percent, dim_screen);
 		break;
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_IDLE_DIM:
-		fso_dimit(dim_idle_dim_percent);
+		fso_dimit(dim_idle_dim_percent, dim_screen);
 		break;
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_IDLE_PRELOCK:
-		fso_dimit(dim_idle_prelock_percent);
+		fso_dimit(dim_idle_prelock_percent, dim_screen);
 		break;
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_LOCK:
 		if (idle_screen & IDLE_SCREEN_LOCK &&
@@ -663,7 +695,7 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 					&incoming_calls_size, call_id) == -1) {
 				_call_add(&incoming_calls,
 					&incoming_calls_size, call_id);
-				fso_dimit(100);
+				fso_dimit(100, DIM_SCREEN_ALWAYS);
 				free_smartphone_usage_request_resource
 					(fso.usage, "CPU", NULL, NULL);
 				phoneuid_call_management_show_incoming(

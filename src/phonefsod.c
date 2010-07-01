@@ -163,6 +163,7 @@ _load_config()
 	GError *error = NULL;
 	char *debug_level = NULL;
 	char *logpath = NULL;
+	char *s = NULL;
 
 	/* Read the phonefsod preferences */
 	keyfile = g_key_file_new();
@@ -248,6 +249,30 @@ _load_config()
 			g_error_free(error);
 			error = NULL;
 		}
+		s = g_key_file_get_string(keyfile, "idle",
+						"dim_screen", &error);
+		if (error) {
+			dim_screen = DIM_SCREEN_ALWAYS;
+			g_error_free(error);
+			error = NULL;
+		}
+		else {
+			if (!strncmp("never", s, 5)) {
+				dim_screen = DIM_SCREEN_NEVER;
+			}
+			else if (!strncmp("onbat", s, 5)) {
+				dim_screen = DIM_SCREEN_ONBAT;
+			}
+			else if (!strncmp("always", s, 6)) {
+				dim_screen = DIM_SCREEN_ALWAYS;
+			}
+			else {
+				g_warning("Invalid value '%s' for dim_screen in [idle] section of %s",
+					  s, PHONEFSOD_CONFIG);
+				g_message("Defaulting to DIM_SCREEN_ALWAYS");
+				dim_screen = DIM_SCREEN_ALWAYS;
+			}
+		}
 		minimum_brightness =
 			g_key_file_get_integer(keyfile, "idle",
 					"minimum_brightness", &error);
@@ -280,7 +305,7 @@ _load_config()
 			g_error_free(error);
 			error = NULL;
 		}
-		char *s = g_key_file_get_string(keyfile, "idle",
+		s = g_key_file_get_string(keyfile, "idle",
 					"idle_screen", &error);
 		if (error) {
 			g_debug("no idle_screen found in config - defaulting to lock,aux");
