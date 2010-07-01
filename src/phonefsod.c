@@ -669,6 +669,10 @@ _name_owner_changed(DBusGProxy *proxy, const char *name,
 		if (sim_auth_needed && !strcmp(name, "org.shr.phoneui")) {
 			phoneuid_notification_show_sim_auth(0);
 			sim_auth_needed = FALSE;
+			return;
+		}
+		if (!strcmp(name, FSO_FRAMEWORK_GSM_ServiceDBusName)) {
+			fso_startup();
 		}
 /*		if (!strcmp(name, FSO_FRAMEWORK_USAGE_ServiceDBusName)) {
 			fso_connect_usage();
