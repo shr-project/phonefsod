@@ -47,7 +47,6 @@ typedef struct {
 static gboolean sim_ready = FALSE;
 static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
-static gboolean gsm_ready = FALSE;
 static time_t startup_time = FALSE;
 static call_t *incoming_calls = NULL;
 static call_t *outgoing_calls = NULL;
@@ -565,20 +564,7 @@ _usage_resource_changed_handler(GSource *source, char *name, gboolean state,
 	if (p)
 		g_debug("   refcount: %d", g_value_get_int(p));
 
-	if (strcmp(name, "GSM") == 0) {
-		/* check if state actually really changed for GSM */
-		if (gsm_ready ^ state) {
-			gsm_ready = state;
-			if (gsm_ready) {
-				fso_set_functionality();
-			}
-		}
-/*		else if (!offline_mode && !gsm_ready) {
-			g_debug("GSM not ready... handle offline mode");
-			fso_go_online_offline();
-		}*/
-	}
-	else if (strcmp(name, "Display") == 0) {
+	if (strcmp(name, "Display") == 0) {
 		g_debug("Display state state changed: %s",
 			state ? "enabled" : "disabled");
 		display_state = state;
@@ -762,6 +748,7 @@ _gsm_device_status_handler(GSource *source,
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_READY) {
 		g_debug("SIM is alive-sim-ready");
 		sim_auth_needed = FALSE;
+		fso_set_functionality();
 		fso_pdp_set_credentials();
 		free_smartphone_gsm_sim_get_sim_info
 			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
