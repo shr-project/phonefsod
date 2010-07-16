@@ -2,11 +2,14 @@
 #ifndef _PHONEFSOD_GLOBALS_H
 #define _PHONEFSOD_GLOBALS_H
 
+#include <freesmartphone.h>
+
 gboolean offline_mode;
 gboolean sim_auth_needed;
 int inhibit_suspend_on_startup_time;
 gboolean show_incoming_sms;
 int gsm_reregister_timeout;
+FreeSmartphoneGSMCallingIdentificationStatus calling_identification;
 char *pdp_apn;
 char *pdp_user;
 char *pdp_password;

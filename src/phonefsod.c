@@ -41,6 +41,7 @@
 #include <dbus/dbus-glib.h>
 
 #include <fsoframework.h>
+#include <freesmartphone.h>
 
 #include "phonefsod-dbus.h"
 #include "phonefsod-dbus-phoneuid.h"
@@ -219,6 +220,31 @@ _load_config()
 			g_message("invalid reregister_timeout - setting to %ds",
 					MINIMUM_GSM_REREGISTER_TIMEOUT);
 			gsm_reregister_timeout = MINIMUM_GSM_REREGISTER_TIMEOUT;
+		}
+
+		s = g_key_file_get_string(keyfile, "gsm",
+					  "calling_identification", &error);
+		if (error) {
+			calling_identification = FREE_SMARTPHONE_GSM_CALLING_IDENTIFICATION_STATUS_NETWORK;
+			g_error_free(error);
+			error = NULL;
+		}
+		else {
+			if (!strncmp("off", s, 3)) {
+				calling_identification = FREE_SMARTPHONE_GSM_CALLING_IDENTIFICATION_STATUS_OFF;
+			}
+			else if (!strncmp("on", s, 2)) {
+				calling_identification = FREE_SMARTPHONE_GSM_CALLING_IDENTIFICATION_STATUS_ON;
+			}
+			else if (!strncmp("network", s, 7)) {
+				calling_identification = FREE_SMARTPHONE_GSM_CALLING_IDENTIFICATION_STATUS_NETWORK;
+			}
+			else {
+				g_warning("Invalid value '%s' for calling_identification in [gsm] section of %s",
+					  s, PHONEFSOD_CONFIG);
+				g_message("Defaulting to network");
+				calling_identification = FREE_SMARTPHONE_GSM_CALLING_IDENTIFICATION_STATUS_NETWORK;
+			}
 		}
 
 		pdp_apn = g_key_file_get_string(keyfile, "gsm",

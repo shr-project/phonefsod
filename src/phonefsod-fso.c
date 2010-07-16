@@ -750,6 +750,8 @@ _gsm_device_status_handler(GSource *source,
 		sim_auth_needed = FALSE;
 		fso_set_functionality();
 		fso_pdp_set_credentials();
+		free_smartphone_gsm_network_set_calling_identification
+			(fso.gsm_network, calling_identification, NULL, NULL);
 		free_smartphone_gsm_sim_get_sim_info
 			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
 	}
