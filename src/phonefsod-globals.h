@@ -13,6 +13,7 @@ FreeSmartphoneGSMCallingIdentificationStatus calling_identification;
 char *pdp_apn;
 char *pdp_user;
 char *pdp_password;
+char *sim_pin;
 
 int default_brightness;
 int minimum_brightness;

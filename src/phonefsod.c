@@ -266,6 +266,12 @@ _load_config()
 			error = NULL;
 		}
 
+		sim_pin = g_key_file_get_string(keyfile, "gsm", "pin", &error);
+		if (error) {
+			g_error_free(error);
+			error = NULL;
+		}
+
 		/* --- [idle] --- */
 		default_brightness =
 			g_key_file_get_integer(keyfile, "idle",

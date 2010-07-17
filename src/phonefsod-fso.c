@@ -47,6 +47,7 @@ typedef struct {
 static gboolean sim_ready = FALSE;
 static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
+static gboolean func_is_set = FALSE;
 static time_t startup_time = FALSE;
 static call_t *incoming_calls = NULL;
 static call_t *outgoing_calls = NULL;
@@ -300,7 +301,7 @@ fso_set_functionality()
 	}
 	else {
 		free_smartphone_gsm_device_set_functionality
-			(fso.gsm_device, "full", TRUE, "",
+			(fso.gsm_device, "full", TRUE, sim_pin ? sim_pin : "",
 			(GAsyncReadyCallback)_set_functionality_callback, NULL);
 	}
 	return FALSE;
@@ -452,6 +453,7 @@ _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data)
 		g_error_free(error);
 		return;
 	}
+	func_is_set = TRUE;
 }
 
 static void
@@ -742,18 +744,28 @@ _gsm_device_status_handler(GSource *source,
 		phoneuid_notification_show_dialog(PHONEUI_DIALOG_SIM_NOT_PRESENT);
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_LOCKED) {
-		sim_auth_needed = TRUE;
-		phoneuid_notification_show_sim_auth(status);
+		if (sim_pin) {
+			fso_set_functionality();
+		}
+		else {
+			sim_auth_needed = TRUE;
+			phoneuid_notification_show_sim_auth(status);
+		}
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_READY) {
 		g_debug("SIM is alive-sim-ready");
 		sim_auth_needed = FALSE;
-		fso_set_functionality();
+		if (!func_is_set) {
+			fso_set_functionality();
+		}
+		free_smartphone_gsm_sim_get_sim_info
+			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
+	}
+	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_REGISTERED) {
+		g_debug("alive-registered");
 		fso_pdp_set_credentials();
 		free_smartphone_gsm_network_set_calling_identification
 			(fso.gsm_network, calling_identification, NULL, NULL);
-		free_smartphone_gsm_sim_get_sim_info
-			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
 	}
 }
 
