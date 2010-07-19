@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008
+ *  Copyright (C) 2008-2010
  *      Authors (alphabetical) :
  *              Marc-Olivier Barre <marco@marcochapeau.org>
  *              Julien Cassignol <ainulindale@gmail.com>
@@ -31,8 +31,6 @@
 
 G_DEFINE_TYPE(PhonefsodUsageService, phonefsod_usage_service, G_TYPE_OBJECT)
 
-
-// int resources[OUSAGED_RESOURCE_COUNT];
 
 static void
 _write_offline_mode_to_config(void)
@@ -165,9 +163,6 @@ phonefsod_usage_service_init(PhonefsodUsageService * object)
 {
 	int f;
 
-// 	for (f = 0; f < OUSAGED_RESOURCE_COUNT; f++)
-// 		resources[f] = 0;
-
 	PhonefsodUsageServiceClass *klass =
 		PHONEFSOD_USAGE_SERVICE_GET_CLASS(object);
 
@@ -202,116 +197,6 @@ phonefsod_usage_service_get_offline_mode(PhonefsodUsageService *object,
 		DBusGMethodInvocation *context)
 {
 	dbus_g_method_return(context, offline_mode);
-}
-
-// static void
-// _resource_state_callback(GError *error, gboolean state, gpointer userdata)
-// {
-// 	DBusGMethodInvocation *context = (DBusGMethodInvocation *) userdata;
-// 	if (error != NULL)
-// 		dbus_g_method_return_error(context, error);
-// 	else
-// 		dbus_g_method_return(context, state);
-// }
-
-void
-phonefsod_usage_service_get_resource_state(PhonefsodUsageService * object,
-					    const char *resource,
-					    DBusGMethodInvocation * context)
-{
-/*	if (resource != NULL) {
-		fso_get_resource_state
-			(resource, _resource_state_callback, context);
-	}*/
-	dbus_g_method_return(context);
-}
-
-// typedef struct {
-// 	DBusGMethodInvocation *context;
-// 	char *resource;
-// 	int res;
-// } phonefsod_usage_request_resource_data_t;
-//
-// void
-// phonefsod_usage_request_resource_callback(GError * error, gpointer userdata)
-// {
-// 	phonefsod_usage_request_resource_data_t *data = userdata;
-//
-// 	if (error != NULL) {
-// 		g_debug("error: %s", error->message);
-// 	}
-// 	else {
-// 		g_debug("requested resource %s", data->resource,
-// 			resources[data->res]);
-// 		resources[data->res] = 1;
-// 	}
-// 	g_free(data->resource);
-// 	dbus_g_method_return(data->context);
-// }
-
-void
-phonefsod_usage_service_request_resource(PhonefsodUsageService * object,
-					  const char *resource,
-					  DBusGMethodInvocation * context)
-{
-/*	if (resource != NULL) {
-		int res = ousaged_resource_name_to_int(resource);
-		resources[res]++;
-		if (resources[res] > 1) {
-			dbus_g_method_return(context);
-			return;
-		}
-		phonefsod_usage_request_resource_data_t *data =
-			g_malloc(sizeof
-				 (phonefsod_usage_request_resource_data_t));
-		data->context = context;
-		data->resource = g_strdup(resource);
-		data->res = res;
-		ousaged_request_resource(resource,
-					 phonefsod_usage_request_resource_callback,
-					 data);
-	}*/
-	dbus_g_method_return(context);
-}
-
-// void
-// phonefsod_usage_release_resource_callback(GError * error, gpointer userdata)
-// {
-// 	phonefsod_usage_request_resource_data_t *data = userdata;
-// 	if (error != NULL) {
-// 		g_debug("error: %s", error->message);
-// 	}
-// 	else {
-// 		g_debug("released resource %s", data->resource);
-// 	}
-// 	resources[data->res] = 0;
-// 	g_free(data->resource);
-// 	dbus_g_method_return(data->context);
-// }
-
-void
-phonefsod_usage_service_release_resource(PhonefsodUsageService * object,
-					  const char *resource,
-					  DBusGMethodInvocation * context)
-{
-/*	if (resource != NULL) {
-		int res = ousaged_resource_name_to_int(resource);
-		resources[res]--;
-		if (resources[res] > 0) {
-			dbus_g_method_return(context);
-			return;
-		}
-		phonefsod_usage_request_resource_data_t *data =
-			g_malloc(sizeof
-				 (phonefsod_usage_request_resource_data_t));
-		data->context = context;
-		data->resource = g_strdup(resource);
-		data->res = res;
-		ousaged_release_resource(resource,
-					 phonefsod_usage_release_resource_callback,
-					 data);
-	}*/
-	dbus_g_method_return(context);
 }
 
 void

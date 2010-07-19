@@ -49,17 +49,6 @@ void phonefsod_usage_service_set_offline_mode(PhonefsodUsageService *object,
 void phonefsod_usage_service_get_offline_mode(PhonefsodUsageService *object,
 		DBusGMethodInvocation *context);
 
-void phonefsod_usage_service_get_resource_state(PhonefsodUsageService *
-						 object, const char *resource,
-						 DBusGMethodInvocation *
-						 context);
-void phonefsod_usage_service_release_resource(PhonefsodUsageService * object,
-					       const char *resource,
-					       DBusGMethodInvocation * context);
-void phonefsod_usage_service_request_resource(PhonefsodUsageService * object,
-					       const char *resource,
-					       DBusGMethodInvocation * context);
-
 void
 phonefsod_usage_service_set_default_brightness(PhonefsodUsageService *object,
 					       int brightness,
