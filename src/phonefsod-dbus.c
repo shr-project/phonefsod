@@ -1,15 +1,11 @@
 /*
- *  Copyright (C) 2008
+ *  Copyright (C) 2009
  *      Authors (alphabetical) :
- *              Marc-Olivier Barre <marco@marcochapeau.org>
- *              Julien Cassignol <ainulindale@gmail.com>
- *              Andreas Engelbredt Dalsgaard <andreas.dalsgaard@gmail.com>
  *              Klaus 'mrmoku' Kurzmann <mok@fluxnetz.de>
- *              quickdev
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Public License as published by
- *  the Free Software Foundation; version 2 of the license.
+ *  the Free Software Foundation; version 2 of the license or any later version.
  *
  *  This program is distributed in the hope that it will be useful,
  *  but WITHOUT ANY WARRANTY; without even the implied warranty of
