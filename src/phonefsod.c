@@ -36,11 +36,7 @@
 #include <glib/gthread.h>
 #include <dbus/dbus-glib.h>
 
-#include <fsoframework.h>
-#include <freesmartphone.h>
-
 #include "phonefsod-dbus.h"
-#include "phonefsod-dbus-phoneuid.h"
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
 
@@ -711,36 +707,6 @@ static gint _daemonize (gchar *pidfilename)
 	return (EXIT_SUCCESS);
 }
 
-static void
-_name_owner_changed(DBusGProxy *proxy, const char *name,
-		    const char *prev, const char *new, gpointer data)
-{
-	(void) proxy;
-	(void) data;
-	g_debug("NameOwnerChanged: %s / %s / %s", name, prev, new);
-	if (new && *new) {
-		if (sim_auth_needed && !strcmp(name, "org.shr.phoneui")) {
-			phoneuid_notification_show_sim_auth(0);
-			sim_auth_needed = FALSE;
-			return;
-		}
-		if (!strcmp(name, FSO_FRAMEWORK_GSM_ServiceDBusName)) {
-			fso_startup();
-		}
-/*		if (!strcmp(name, FSO_FRAMEWORK_USAGE_ServiceDBusName)) {
-			fso_connect_usage();
-		}
-		else if (!strcmp(name, FSO_FRAMEWORK_GSM_ServiceDBusName)) {
-			fso_connect_gsm();
-		}
-		else if (!strcmp(name, FSO_FRAMEWORK_PIM_ServiceDBusName)) {
-			fso_connect_pim();
-		}
-		else if (!strcmp(name, FSO_FRAMEWORK_DEVICE_ServiceDBusName)) {
-			fso_connect_device();
-		}*/
-	}
-}
 
 /* Main Entry Point for this Daemon */
 extern int main (int argc, char *argv[])
@@ -823,7 +789,7 @@ extern int main (int argc, char *argv[])
 
 	_load_config();
 
-	system_bus = dbus_g_bus_get(DBUS_BUS_SYSTEM, &gerror);
+	system_bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &gerror);
 	if (gerror) {
 		g_error("%d: %s", gerror->code, gerror->message);
 		g_error_free(gerror);
@@ -831,16 +797,6 @@ extern int main (int argc, char *argv[])
 		g_main_loop_unref(main_loop);
 		exit(EXIT_FAILURE);
 	}
-
-	/* register for NameOwnerChanged */
-	dbus_proxy = dbus_g_proxy_new_for_name (system_bus,
-			DBUS_SERVICE_DBUS, DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS);
-	dbus_g_proxy_add_signal(dbus_proxy, "NameOwnerChanged", G_TYPE_STRING,
-				G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INVALID);
-
-	dbus_g_proxy_connect_signal(dbus_proxy, "NameOwnerChanged",
-				    G_CALLBACK(_name_owner_changed), NULL, NULL);
-
 
 	/* connect and init FSO */
 	if (!fso_init()) {
@@ -874,6 +830,14 @@ extern int main (int argc, char *argv[])
 //		free(incoming_calls);
 //	if (outgoing_calls)
 //		free(outgoing_calls);
+	if (sim_pin)
+		free(sim_pin);
+	if (pdp_apn)
+		free(pdp_apn);
+	if (pdp_user)
+		free(pdp_user);
+	if (pdp_password)
+		free(pdp_password);
 
 	/* become the privledged user again */
 	seteuid (real_user_id);

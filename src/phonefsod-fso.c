@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2009-2010
+ *  Copyright (C) 2009-2011
  *      Authors (alphabetical) :
  *              Klaus 'mrmoku' Kurzmann <mok@fluxnetz.de>
  *
@@ -19,15 +19,13 @@
 #include <time.h>
 #include <glib.h>
 #include <glib/gthread.h>
-#include <dbus/dbus-glib.h>
-#include <dbus/dbus-glib-lowlevel.h>
-#include <dbus/dbus-glib-bindings.h>
+#include <gio/gio.h>
 #include <freesmartphone.h>
-#include <fsoframework.h>
-//#include <phoneui/phoneui.h>
-#include "phonefsod-dbus-phoneuid.h"
+#include <shr-bindings.h>
+#include "phonefsod-dbus.h"
 #include "phonefsod-fso.h"
 #include "phonefsod-globals.h"
+#include "phonefsod-dbus-common.h"
 
 #define MIN_SIM_SLOTS_FREE 1
 
@@ -78,14 +76,14 @@ static void _stop_startup();
 static void _startup_check();
 
 /* dbus method callbacks */
-static void _list_resources_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _request_resource_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _going_offline_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _going_online_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _gsm_sim_ready_status_callback(GSource *source, GAsyncResult *res, gpointer data);
+static void _list_resources_callback(GObject *source, GAsyncResult *res, gpointer data);
+static void _request_resource_callback(GObject *source, GAsyncResult *res, gpointer data);
+static void _going_offline_callback(GObject *source, GAsyncResult *res, gpointer data);
+static void _going_online_callback(GObject *source, GAsyncResult *res, gpointer data);
+static void _gsm_sim_ready_status_callback(GObject *source, GAsyncResult *res, gpointer data);
 static void _gsm_sim_sim_info_callback(GObject *source, GAsyncResult *res, gpointer data);
-static void _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data);
-static void _get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data);
+static void _set_functionality_callback(GObject *source, GAsyncResult *res, gpointer data);
+static void _get_power_status_callback(GObject *source, GAsyncResult *res, gpointer data);
 static void _get_idle_state_callback(GObject *source, GAsyncResult *res, gpointer data);
 
 /* dbus signal handlers */
@@ -106,6 +104,30 @@ static void _call_add(call_t ** calls, int *size, int id);
 static int _call_check(call_t * calls, int *size, int id);
 static void _call_remove(call_t ** calls, int *size, int id);
 
+
+static gpointer
+_dbus_proxy(GType type, const gchar *obj, const gchar *path, const gchar *iface)
+{
+	GError *error = NULL;
+	gpointer ret;
+
+	ret = g_initable_new(type, NULL, &error,
+				"g-flags", G_DBUS_PROXY_FLAGS_DO_NOT_LOAD_PROPERTIES,
+				"g-name", obj,
+				"g-bus-type", G_BUS_TYPE_SYSTEM,
+				"g-object-path", path,
+				"g-interface-name", iface,
+				NULL);
+
+	if (error) {
+		g_warning("failed to connect to %s: %s", path, error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	return ret;
+}
+
 gboolean
 fso_init()
 {
@@ -117,7 +139,8 @@ fso_init()
 	fso_connect_device();
 
 	/* send fsogsmd a ping to dbus-activate it, if not running yet */
-	free_smartphone_gsm_device_get_device_status(fso.gsm_device, NULL, NULL);
+/*	if (fso.gsm_device)
+		free_smartphone_gsm_device_get_device_status(fso.gsm_device, NULL, NULL);*/
 	g_debug("Done connecting to FSO");
 
 	return TRUE;
@@ -126,9 +149,16 @@ fso_init()
 void
 fso_connect_usage()
 {
-	fso.usage = free_smartphone_get_usage_proxy(system_bus,
-				FSO_FRAMEWORK_USAGE_ServiceDBusName,
-				FSO_FRAMEWORK_USAGE_ServicePathPrefix);
+	g_debug("connecting to %s", FSO_USAGE_SERVICE);
+
+	fso.usage = (FreeSmartphoneUsage *)
+			(_dbus_proxy
+				(FREE_SMARTPHONE_TYPE_USAGE_PROXY,
+				 FSO_USAGE_SERVICE,
+				 FSO_USAGE_PATH,
+				 FSO_USAGE_IFACE)
+			);
+
 	if (fso.usage) {
 		g_signal_connect(G_OBJECT(fso.usage), "resource-changed",
 				G_CALLBACK(_usage_resource_changed_handler), NULL);
@@ -143,22 +173,37 @@ fso_connect_usage()
 void
 fso_connect_gsm()
 {
-	fso.gsm_device = free_smartphone_gsm_get_device_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	g_debug("connecting to %s", FSO_GSM_SERVICE);
+
+	fso.gsm_device = (FreeSmartphoneGSMDevice *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_GSM_TYPE_DEVICE_PROXY,
+					 FSO_GSM_SERVICE,
+					 FSO_GSM_DEVICE_PATH,
+					 FSO_GSM_DEVICE_IFACE)
+				);
+
 	if (fso.gsm_device) {
 		g_debug("Connected to FSO/GSM/Device");
 		g_signal_connect(fso.gsm_device, "device-status",
 				 G_CALLBACK(_gsm_device_status_handler), NULL);
 	}
 
-	fso.gsm_sim = free_smartphone_gsm_get_s_i_m_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	fso.gsm_sim = (FreeSmartphoneGSMSIM *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_GSM_TYPE_SIM_PROXY,
+					 FSO_GSM_SERVICE,
+					 FSO_GSM_DEVICE_PATH,
+					 FSO_GSM_SIM_IFACE)
+				);
 
-	fso.gsm_network = free_smartphone_gsm_get_network_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	fso.gsm_network = (FreeSmartphoneGSMNetwork *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_GSM_TYPE_NETWORK_PROXY,
+					 FSO_GSM_SERVICE,
+					 FSO_GSM_DEVICE_PATH,
+					 FSO_GSM_NETWORK_IFACE)
+				);
 	if (fso.gsm_network) {
 		g_signal_connect(G_OBJECT(fso.gsm_network), "status",
 				G_CALLBACK(_gsm_network_status_handler), NULL);
@@ -167,13 +212,21 @@ fso_connect_gsm()
 		g_debug("Connected to FSO/GSM/Network");
 	}
 
-	fso.gsm_pdp = free_smartphone_gsm_get_p_d_p_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	fso.gsm_pdp = (FreeSmartphoneGSMPDP *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_GSM_TYPE_PDP_PROXY,
+					 FSO_GSM_SERVICE,
+					 FSO_GSM_DEVICE_PATH,
+					 FSO_GSM_PDP_IFACE)
+				);
 
-	fso.gsm_call = free_smartphone_gsm_get_call_proxy(system_bus,
-				FSO_FRAMEWORK_GSM_ServiceDBusName,
-				FSO_FRAMEWORK_GSM_DeviceServicePath);
+	fso.gsm_call = (FreeSmartphoneGSMCall *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_GSM_TYPE_CALL_PROXY,
+					 FSO_GSM_SERVICE,
+					 FSO_GSM_DEVICE_PATH,
+					 FSO_GSM_CALL_IFACE)
+				);
 	if (fso.gsm_call) {
 		g_signal_connect(G_OBJECT(fso.gsm_call), "call-status",
 				G_CALLBACK(_gsm_call_status_handler), NULL);
@@ -185,9 +238,15 @@ fso_connect_gsm()
 void
 fso_connect_pim()
 {
-	fso.pim_messages = free_smartphone_pim_get_messages_proxy(system_bus,
-				FSO_FRAMEWORK_PIM_ServiceDBusName,
-				FSO_FRAMEWORK_PIM_MessagesServicePath);
+	g_debug("connecting to %s", FSO_PIM_SERVICE);
+
+	fso.pim_messages = (FreeSmartphonePIMMessages *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_PIM_TYPE_MESSAGES_PROXY,
+					 FSO_PIM_SERVICE,
+					 FSO_PIM_MESSAGES_PATH,
+					 FSO_PIM_MESSAGES_IFACE)
+				);
 	if (fso.pim_messages) {
 		g_signal_connect(G_OBJECT(fso.pim_messages), "incoming-message",
 				G_CALLBACK(_pim_incoming_message_handler), NULL);
@@ -198,35 +257,52 @@ fso_connect_pim()
 void
 fso_connect_device()
 {
-	fso.idle_notifier = free_smartphone_device_get_idle_notifier_proxy
-			(system_bus, FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-			FSO_FRAMEWORK_DEVICE_IdleNotifierServicePath "/0");
+	g_debug("connecting to %s", FSO_DEVICE_SERVICE);
+
+	fso.idle_notifier = (FreeSmartphoneDeviceIdleNotifier *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_DEVICE_TYPE_IDLE_NOTIFIER_PROXY,
+					 FSO_DEVICE_SERVICE,
+					 FSO_DEVICE_IDLE_NOTIFIER_PATH,
+					 FSO_DEVICE_IDLE_NOTIFIER_IFACE)
+				);
 	if (fso.idle_notifier) {
 		g_signal_connect(G_OBJECT(fso.idle_notifier), "state",
 			G_CALLBACK(_device_idle_notifier_state_handler), NULL);
 		g_debug("Connected to FSO/Device/IdleNotifier");
 	}
 
-	fso.input = free_smartphone_device_get_input_proxy(system_bus,
-				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-				FSO_FRAMEWORK_DEVICE_InputServicePath);
+	fso.input = (FreeSmartphoneDeviceInput *)
+			(_dbus_proxy
+				(FREE_SMARTPHONE_DEVICE_TYPE_INPUT_PROXY,
+				 FSO_DEVICE_SERVICE,
+				 FSO_DEVICE_INPUT_PATH,
+				 FSO_DEVICE_INPUT_IFACE)
+			);
 	if (fso.input) {
 		g_signal_connect(G_OBJECT(fso.input), "event",
 				 G_CALLBACK(_device_input_event_handler), NULL);
 		g_debug("Connected to FSO/Device/Input");
 	}
 
-	fso.display = free_smartphone_device_get_display_proxy(system_bus,
-				FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-				FSO_FRAMEWORK_DEVICE_DisplayServicePath "/0");
+	fso.display = (FreeSmartphoneDeviceDisplay *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_DEVICE_TYPE_DISPLAY_PROXY,
+					 FSO_DEVICE_SERVICE,
+					 FSO_DEVICE_DISPLAY_PATH,
+					 FSO_DEVICE_DISPLAY_IFACE)
+				);
 	if (fso.display) {
 		g_debug("Connected to FSO/Device/Display");
 	}
 
-	fso.power_supply = free_smartphone_device_get_power_supply_proxy
-				(system_bus,
-				 FSO_FRAMEWORK_DEVICE_ServiceDBusName,
-				 FSO_FRAMEWORK_DEVICE_PowerSupplyServicePath);
+	fso.power_supply = (FreeSmartphoneDevicePowerSupply *)
+				(_dbus_proxy
+					(FREE_SMARTPHONE_DEVICE_TYPE_POWER_SUPPLY_PROXY,
+					 FSO_DEVICE_SERVICE,
+					 FSO_DEVICE_POWER_SUPPLY_PATH,
+					 FSO_DEVICE_POWER_SUPPLY_IFACE)
+				);
 	if (fso.power_supply) {
 		g_debug("Connected to FSO/Device/PowerSupply");
 	}
@@ -260,16 +336,21 @@ _fso_dim_screen(int percent)
 	free_smartphone_device_display_set_brightness
 			(fso.display, b, NULL, NULL);
 	if (b == 0) {
-		phoneuid_idle_screen_activate_screensaver();
+		phoneui_idle_screen_call_activate_screensaver
+			(phoneui.idle_screen, NULL,
+			 phoneui_activate_screensaver_cb, NULL);
 	}
 	else {
-		phoneuid_idle_screen_deactivate_screensaver();
+		phoneui_idle_screen_call_deactivate_screensaver
+			(phoneui.idle_screen, NULL,
+			 phoneui_deactivate_screensaver_cb, NULL);
 	}
 }
 
 static void
-_get_power_status_for_dimming_callback(GSource *source, GAsyncResult *res,
-				       gpointer data)
+_get_power_status_for_dimming_callback(GObject *source,
+					    GAsyncResult *res,
+					    gpointer data)
 {
 	(void) source;
 	GError *error = NULL;
@@ -311,13 +392,13 @@ fso_set_functionality()
 	if (offline_mode) {
 		_stop_startup();
 		free_smartphone_gsm_device_set_functionality
-			(fso.gsm_device, "airplane", FALSE, "",
-			(GAsyncReadyCallback)_set_functionality_callback, NULL);
+			(fso.gsm_device, "airplane", FALSE, sim_pin ? sim_pin : "",
+			_set_functionality_callback, NULL);
 	}
 	else {
 		free_smartphone_gsm_device_set_functionality
 			(fso.gsm_device, "full", TRUE, sim_pin ? sim_pin : "",
-			(GAsyncReadyCallback)_set_functionality_callback, NULL);
+			_set_functionality_callback, NULL);
 	}
 	return FALSE;
 }
@@ -336,7 +417,7 @@ static gboolean
 _fso_list_resources()
 {
 	free_smartphone_usage_list_resources(fso.usage,
-			(GAsyncReadyCallback)_list_resources_callback, NULL);
+			_list_resources_callback, NULL);
 	return FALSE;
 }
 
@@ -352,7 +433,7 @@ _fso_request_gsm()
 		g_debug("Request GSM resource");
 		gsm_request_running = TRUE;
 		free_smartphone_usage_request_resource(fso.usage, "GSM",
-			(GAsyncReadyCallback)_request_resource_callback, NULL);
+			_request_resource_callback, NULL);
 	}
 	else {
 		g_warning("Not requesting GSM as it is not available");
@@ -376,7 +457,7 @@ _fso_suspend(void)
 	if (auto_suspend == SUSPEND_NORMAL) {
 		free_smartphone_device_power_supply_get_power_status
 			(fso.power_supply,
-			 (GAsyncReadyCallback)_get_power_status_callback, NULL);
+			 _get_power_status_callback, NULL);
 		return;
 	}
 
@@ -385,7 +466,7 @@ _fso_suspend(void)
 
 /* --- dbus callbacks --- */
 static void
-_list_resources_callback(GSource *source, GAsyncResult *res, gpointer data)
+_list_resources_callback(GObject *source, GAsyncResult *res, gpointer data)
 {
 	char **resources;
 	int count;
@@ -397,10 +478,16 @@ _list_resources_callback(GSource *source, GAsyncResult *res, gpointer data)
 	g_debug("list_resources_callback()");
 	resources = free_smartphone_usage_list_resources_finish
 			(fso.usage, res, &count, &error);
-        _startup_check();
+	_startup_check();
 	if (error) {
-		g_message("  error: (%d) %s", error->code, error->message);
-		g_timeout_add(1000, _fso_list_resources, NULL);
+		if (error->code == G_DBUS_ERROR_SERVICE_UNKNOWN) {
+			g_critical("fsousaged not installed: %s", error->message);
+		}
+		else {
+			g_message("error - retrying in 1s: (%d) %s", error->code, error->message);
+			g_timeout_add(1000, _fso_list_resources, NULL);
+		}
+		g_error_free(error);
 		return;
 	}
 
@@ -421,7 +508,7 @@ _list_resources_callback(GSource *source, GAsyncResult *res, gpointer data)
 }
 
 static void
-_request_resource_callback(GSource *source, GAsyncResult *res, gpointer data)
+_request_resource_callback(GObject *source, GAsyncResult *res, gpointer data)
 {
 	(void) data;
 	GError *error = NULL;
@@ -455,7 +542,7 @@ _request_resource_callback(GSource *source, GAsyncResult *res, gpointer data)
 }
 
 static void
-_set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data)
+_set_functionality_callback(GObject *source, GAsyncResult *res, gpointer data)
 {
 	(void) data;
 	GError *error = NULL;
@@ -472,7 +559,7 @@ _set_functionality_callback(GSource *source, GAsyncResult *res, gpointer data)
 }
 
 static void
-_get_power_status_callback(GSource *source, GAsyncResult *res, gpointer data)
+_get_power_status_callback(GObject *source, GAsyncResult *res, gpointer data)
 {
 	(void) source;
 	(void) data;
@@ -539,8 +626,11 @@ _gsm_sim_sim_info_callback(GObject* source, GAsyncResult* res, gpointer data)
 	}
 	if (slots_total - slots_used < MIN_SIM_SLOTS_FREE) {
 		g_message("No more free slots for messages on SIM!");
-		phoneuid_notification_show_dialog
-					(PHONEUI_DIALOG_MESSAGE_STORAGE_FULL);
+		// TODO: verify if one free slot is needed for receiving
+		//       messages and remove this dialog if not
+		phoneui_notification_call_display_dialog
+			(phoneui.notification, PHONEUI_DIALOG_MESSAGE_STORAGE_FULL,
+			 NULL, phoneui_display_message_cb, NULL);
 	}
 	else {
 		g_debug("SIM has %d free slots for messages",
@@ -561,8 +651,12 @@ _usage_resource_available_handler(GSource *source, char *name,
 		availability ? "available" : "vanished");
 	if (strcmp(name, "GSM") == 0) {
 		gsm_available = availability;
-		if (gsm_available)
+		if (gsm_available) {
 			_fso_request_gsm();
+		}
+		else {
+			gsm_request_running = FALSE;
+		}
 	}
 }
 
@@ -602,7 +696,8 @@ _usage_system_action_handler(GSource *source,
 	/* show the IdleScreen if configured to do so on suspend */
 	if (action == FREE_SMARTPHONE_USAGE_SYSTEM_ACTION_SUSPEND &&
 		idle_screen & IDLE_SCREEN_SUSPEND)  {
-		phoneuid_idle_screen_show();
+		phoneui_idle_screen_call_display
+			(phoneui.idle_screen, NULL, phoneui_show_idle_cb, NULL);
 	}
 }
 
@@ -637,7 +732,9 @@ _device_idle_notifier_state_handler(GSource *source,
 				((idle_screen & IDLE_SCREEN_PHONE) ||
 				 ((incoming_calls_size == 0) &&
 				 (outgoing_calls_size == 0)))) {
-		       phoneuid_idle_screen_show();
+			phoneui_idle_screen_call_display
+				(phoneui.idle_screen, NULL,
+				 phoneui_show_idle_cb, NULL);
 		}
 		break;
 	case FREE_SMARTPHONE_DEVICE_IDLE_STATE_SUSPEND:
@@ -657,7 +754,8 @@ _device_input_event_handler(GSource *source, char *src,
 	if (idle_screen & IDLE_SCREEN_AUX &&
 		!strcmp(src, "AUX") &&
 		state == FREE_SMARTPHONE_DEVICE_INPUT_STATE_RELEASED) {
-		phoneuid_idle_screen_toggle();
+		phoneui_idle_screen_call_toggle(phoneui.idle_screen, NULL,
+						    phoneui_toggle_idle_cb, NULL);
 	}
 }
 
@@ -701,8 +799,10 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 				fso_dimit(100, DIM_SCREEN_ALWAYS);
 				free_smartphone_usage_request_resource
 					(fso.usage, "CPU", NULL, NULL);
-				phoneuid_call_management_show_incoming(
-						call_id, status, number);
+				phoneui_call_management_call_display_incoming
+					(phoneui.call_management,
+					call_id, status, number,
+					NULL, phoneui_show_incoming_cb, NULL);
 			}
 			break;
 		case FREE_SMARTPHONE_GSM_CALL_STATUS_OUTGOING:
@@ -713,8 +813,10 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 					&outgoing_calls_size, call_id);
 				free_smartphone_usage_request_resource
 					(fso.usage, "CPU", NULL, NULL);
-				phoneuid_call_management_show_outgoing(
-						call_id, status, number);
+				phoneui_call_management_call_display_outgoing
+					(phoneui.call_management,
+					call_id, status, number,
+					NULL, phoneui_show_outgoing_cb, NULL);
 			}
 			break;
 		case FREE_SMARTPHONE_GSM_CALL_STATUS_RELEASE:
@@ -723,15 +825,18 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 					&incoming_calls_size, call_id) != -1) {
 				_call_remove(&incoming_calls,
 						&incoming_calls_size, call_id);
-				phoneuid_call_management_hide_incoming(
-						call_id);
+				phoneui_call_management_call_hide_incoming
+					(phoneui.call_management,
+					 call_id,
+					 NULL, phoneui_hide_incoming_cb, NULL);
 			}
 			if (_call_check(outgoing_calls,
 					&outgoing_calls_size, call_id) != -1) {
 				_call_remove(&outgoing_calls,
 						&outgoing_calls_size, call_id);
-				phoneuid_call_management_hide_outgoing(
-						call_id);
+				phoneui_call_management_call_hide_outgoing
+					(phoneui.call_management, call_id,
+					 NULL, phoneui_hide_outgoing_cb, NULL);
 			}
 			if (incoming_calls_size == 0 && outgoing_calls_size == 0) {
 				free_smartphone_usage_release_resource
@@ -756,7 +861,9 @@ _gsm_device_status_handler(GSource *source,
 			   gpointer data)
 {
 	if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_NO_SIM) {
-		phoneuid_notification_show_dialog(PHONEUI_DIALOG_SIM_NOT_PRESENT);
+		phoneui_notification_call_display_dialog
+			(phoneui.notification, PHONEUI_DIALOG_SIM_NOT_PRESENT,
+			 NULL, phoneui_show_dialog_cb, NULL);
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_LOCKED) {
 		if (sim_pin) {
@@ -764,7 +871,9 @@ _gsm_device_status_handler(GSource *source,
 		}
 		else {
 			sim_auth_needed = TRUE;
-			phoneuid_notification_show_sim_auth(status);
+			phoneui_notification_call_display_sim_auth
+				(phoneui.notification, status, NULL,
+				 phoneui_show_sim_auth_cb, NULL);
 		}
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_READY) {
@@ -791,7 +900,9 @@ _pim_incoming_message_handler(GSource *source, char *message_path, gpointer data
 	(void) data;
 	g_debug("fso_incoming_message_handler(%s)", message_path);
 	if (show_incoming_sms) {
-		phoneuid_messages_display_message(message_path);
+		phoneui_messages_call_display_message
+			(phoneui.messages, message_path, NULL,
+			 phoneui_display_message_cb, NULL);
 	}
 	/* check if there is still a free slot for the next SMS */
 	free_smartphone_gsm_sim_get_sim_info
@@ -806,7 +917,9 @@ _gsm_network_incoming_ussd_handler(GSource *source, int mode,
 	(void) data;
 	g_debug("fso_incoming_ussd_handler(mode=%d, message=%s)", mode,
 		message);
-	phoneuid_notification_show_ussd(mode, message);
+	phoneui_notification_call_display_ussd
+		(phoneui.notification, mode, message, NULL,
+		 phoneui_show_ussd_cb, NULL);
 }
 
 static void

@@ -17,7 +17,9 @@
 #ifndef _PHONEFSOD_GLOBALS_H
 #define _PHONEFSOD_GLOBALS_H
 
+#include <gio/gio.h>
 #include <freesmartphone.h>
+#include <shr-bindings.h>
 
 gboolean offline_mode;
 gboolean sim_auth_needed;
@@ -37,13 +39,13 @@ int dim_idle_dim_percent;
 int dim_idle_prelock_percent;
 
 
-enum DimScreen {
+enum DimScreenMode {
 	DIM_SCREEN_NEVER,
 	DIM_SCREEN_ONBAT,
 	DIM_SCREEN_ALWAYS
 } dim_screen;
 
-enum IdleScreen {
+enum IdleScreenMode {
 	IDLE_SCREEN_NEVER = 0,
 	IDLE_SCREEN_AUX = 1,
 	IDLE_SCREEN_LOCK = 2,
@@ -51,13 +53,21 @@ enum IdleScreen {
 	IDLE_SCREEN_SUSPEND = 8
 } idle_screen;
 
-enum AutoSuspend {
+enum AutoSuspendMode {
 	SUSPEND_NEVER = 0,
 	SUSPEND_NORMAL,
 	SUSPEND_ALWAYS
 } auto_suspend;
 
 
-DBusGConnection *system_bus;
+GDBusConnection *system_bus;
+
+struct SPhoneui {
+	PhoneuiCallManagement *call_management;
+	PhoneuiMessages *messages;
+	PhoneuiNotification *notification;
+	PhoneuiIdleScreen *idle_screen;
+} phoneui;
+
 
 #endif

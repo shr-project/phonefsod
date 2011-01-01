@@ -16,6 +16,27 @@
 #ifndef _PHONEFSOD_DBUS_H
 #define _PHONEFSOD_DBUS_H
 
+#include <gio/gio.h>
+
 void phonefsod_dbus_setup();
+
+/* phoneuid - dbus callbacks */
+void phoneui_show_incoming_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_hide_incoming_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_show_outgoing_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_hide_outgoing_cb(GObject *source, GAsyncResult *res, gpointer data);
+
+void phoneui_display_message_cb(GObject *source, GAsyncResult *res, gpointer data);
+
+void phoneui_show_dialog_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_show_sim_auth_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_hide_sim_auth_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_show_ussd_cb(GObject *source, GAsyncResult *res, gpointer data);
+
+void phoneui_show_idle_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_hide_idle_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_toggle_idle_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_activate_screensaver_cb(GObject *source, GAsyncResult *res, gpointer data);
+void phoneui_deactivate_screensaver_cb(GObject *source, GAsyncResult *res, gpointer data);
 
 #endif

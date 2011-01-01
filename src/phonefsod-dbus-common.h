@@ -43,4 +43,33 @@
 #define PHONEUID_PHONE_LOG_PATH              PHONEUID_PATH "/PhoneLog"
 #define PHONEUID_IDLE_SCREEN_PATH            PHONEUID_PATH "/IdleScreen"
 
+/* freesmartphone.org */
+#define FSO_USAGE_SERVICE                    "org.freesmartphone.ousaged"
+#define FSO_USAGE_PATH                       "/org/freesmartphone/Usage"
+#define FSO_USAGE_IFACE                      "org.freesmartphone.Usage"
+
+#define FSO_GSM_SERVICE                      "org.freesmartphone.ogsmd"
+#define FSO_GSM_DEVICE_PATH                  "/org/freesmartphone/GSM/Device"
+#define FSO_GSM_DEVICE_IFACE                 "org.freesmartphone.GSM.Device"
+#define FSO_GSM_SIM_IFACE                    "org.freesmartphone.GSM.SIM"
+#define FSO_GSM_NETWORK_IFACE                "org.freesmartphone.GSM.Network"
+#define FSO_GSM_PDP_IFACE                    "org.freesmartphone.GSM.PDP"
+#define FSO_GSM_CALL_IFACE                   "org.freesmartphone.GSM.Call"
+
+
+#define FSO_PIM_SERVICE                      "org.freesmartphone.opimd"
+#define FSO_PIM_MESSAGES_PATH                "/org/freesmartphone/PIM/Messages"
+#define FSO_PIM_MESSAGES_IFACE               "org.freesmartphone.PIM.Messages"
+
+#define FSO_DEVICE_SERVICE                   "org.freesmartphone.odeviced"
+#define FSO_DEVICE_IDLE_NOTIFIER_PATH        "/org/freesmartphone/Device/IdleNotifier/0"
+#define FSO_DEVICE_IDLE_NOTIFIER_IFACE       "org.freesmartphone.Device.IdleNotifier"
+#define FSO_DEVICE_INPUT_PATH                "/org/freesmartphone/Device/Input"
+#define FSO_DEVICE_INPUT_IFACE               "org.freesmartphone.Device.Input"
+#define FSO_DEVICE_DISPLAY_PATH              "/org/freesmartphone/Device/Display/0"
+#define FSO_DEVICE_DISPLAY_IFACE             "org.freesmartphone.Device.Display"
+#define FSO_DEVICE_POWER_SUPPLY_PATH         "/org/freesmartphone/Device/PowerSupply"
+#define FSO_DEVICE_POWER_SUPPLY_IFACE        "org.freesmartphone.Device.PowerSupply"
+
+
 #endif
