@@ -721,7 +721,6 @@ extern int main (int argc, char *argv[])
 	uid_t     effective_user_id = 0;
 	gint      rc = 0;
 	struct    passwd *userinfo = NULL;
-	DBusGProxy *dbus_proxy;
 
 	/* initialize threading and mainloop */
 	g_type_init();
