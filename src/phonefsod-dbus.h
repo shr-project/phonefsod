@@ -18,7 +18,8 @@
 
 #include <gio/gio.h>
 
-void phonefsod_dbus_setup();
+int phonefsod_dbus_setup();
+void phonefsod_dbus_shutdown();
 
 /* phoneuid - dbus callbacks */
 void phoneui_show_incoming_cb(GObject *source, GAsyncResult *res, gpointer data);

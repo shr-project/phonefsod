@@ -787,23 +787,12 @@ extern int main (int argc, char *argv[])
 
 	_load_config();
 
-	system_bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &gerror);
-	if (gerror) {
-		g_error("%d: %s", gerror->code, gerror->message);
-		g_error_free(gerror);
+	if (!phonefsod_dbus_setup()) {
 		g_option_context_free(context);
 		g_main_loop_unref(main_loop);
 		exit(EXIT_FAILURE);
 	}
 
-	/* connect and init FSO */
-	if (!fso_init()) {
-		g_option_context_free(context);
-		g_main_loop_unref(main_loop);
-		exit(EXIT_FAILURE);
-	}
-
-	phonefsod_dbus_setup();
 
 	//notify = inotify_init();
 	//inotify_add_watch(notify, PHONEFSOD_CONFIG, IN_MODIFY);
@@ -812,6 +801,8 @@ extern int main (int argc, char *argv[])
 	g_debug("entering glib main loop");
 	g_timeout_add(0, fso_startup, NULL);
 	g_main_loop_run(main_loop);
+
+	phonefsod_dbus_shutdown();
 
 	/* Cleanup and exit */
 	if (!i_debug) {

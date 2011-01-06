@@ -23,7 +23,7 @@
 
 static guint phonefsod_owner_id = 0;
 static guint phoneuid_watcher_id = 0;
-
+static PhonefsoUsage *usage;
 
 /* phonefso - dbus method handlers */
 static gboolean _set_offline_mode(PhonefsoUsage *object, GDBusMethodInvocation *invocation, gboolean state, gpointer user_data);
@@ -84,16 +84,30 @@ _phoneui_proxy_cb(GObject *source, GAsyncResult *res, gpointer data)
 
 
 
-void
+int
 phonefsod_dbus_setup()
 {
-	phonefsod_owner_id = g_bus_own_name
-		(G_BUS_TYPE_SYSTEM, PHONEFSOD_SERVICE,
-		 G_BUS_NAME_OWNER_FLAGS_REPLACE | G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT,
-		 _on_bus_acquired, _on_name_acquired, _on_name_lost, NULL, NULL );
+	GError *error = NULL;
 
-	phoneuid_watcher_id = g_bus_watch_name
-		(G_BUS_TYPE_SYSTEM, PHONEUID_SERVICE,
+	system_bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
+	if (error) {
+		g_error("%d: %s", error->code, error->message);
+		g_error_free(error);
+		return 0;
+	}
+
+	/* connect and init FSO */
+	if (!fso_init()) {
+		return 0;
+	}
+
+	phonefsod_owner_id = g_bus_own_name_on_connection
+		(system_bus, PHONEFSOD_SERVICE,
+		 G_BUS_NAME_OWNER_FLAGS_REPLACE | G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT,
+		 _on_bus_acquired, _on_name_acquired, _on_name_lost, NULL);
+
+	phoneuid_watcher_id = g_bus_watch_name_on_connection
+		(system_bus, PHONEUID_SERVICE,
 		 G_BUS_NAME_WATCHER_FLAGS_NONE,
 		 _on_phoneuid_appeared, _on_phoneuid_vanished, NULL, NULL);
 
@@ -117,6 +131,14 @@ phonefsod_dbus_setup()
 		 PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL,
 		 _phoneui_proxy_cb, GINT_TO_POINTER(TYPE_PHONEUI_MESSAGES));
 
+	return 1;
+}
+
+void
+phonefsod_dbus_shutdown()
+{
+	g_bus_unown_name(phonefsod_owner_id);
+	g_object_unref(system_bus);
 }
 
 
@@ -130,7 +152,9 @@ _on_bus_acquired (GDBusConnection *connection,
 	/* This is where we'd export some objects on the bus */
 	GError *error = NULL;
 
-	PhonefsoUsage *usage = phonefso_usage_stub_new();
+	g_debug("Yo, on the bus :-) (%s)", name);
+
+	usage = phonefso_usage_stub_new();
 	g_signal_connect(usage, "handle-set-offline-mode", G_CALLBACK(_set_offline_mode), NULL);
 	g_signal_connect(usage, "handle-get-offline-mode", G_CALLBACK(_get_offline_mode), NULL);
 	g_signal_connect(usage, "handle-set-default-brightness", G_CALLBACK(_set_default_brightness), NULL);
@@ -138,8 +162,9 @@ _on_bus_acquired (GDBusConnection *connection,
 	g_signal_connect(usage, "handle-set-pdp-credentials", G_CALLBACK(_set_pdp_credentials), NULL);
 	g_signal_connect(usage, "handle-set-pin", G_CALLBACK(_set_pin), NULL);
 
+
 	g_dbus_interface_register_object(G_DBUS_INTERFACE(usage),
-					     system_bus,
+					     connection,
 					     PHONEFSOD_USAGE_PATH,
 					     &error);
 
