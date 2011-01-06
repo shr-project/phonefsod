@@ -185,7 +185,7 @@ fso_connect_gsm()
 
 	if (fso.gsm_device) {
 		g_debug("Connected to FSO/GSM/Device");
-		g_signal_connect(fso.gsm_device, "device-status",
+		g_signal_connect(G_OBJECT(fso.gsm_device), "device-status",
 				 G_CALLBACK(_gsm_device_status_handler), NULL);
 	}
 
@@ -607,7 +607,7 @@ _gsm_sim_sim_info_callback(GObject* source, GAsyncResult* res, gpointer data)
 	GError *error = NULL;
 	GHashTable *info;
 	int slots_total = 0, slots_used = 0;
-	GValue *gval_tmp;
+	GVariant *tmp;
 
 	info = free_smartphone_gsm_sim_get_sim_info_finish(fso.gsm_sim, res, &error);
 	if (error) {
@@ -616,13 +616,13 @@ _gsm_sim_sim_info_callback(GObject* source, GAsyncResult* res, gpointer data)
 		g_error_free(error);
 		return;
 	}
-	gval_tmp = g_hash_table_lookup(info, "slots");
-	if (gval_tmp) {
-		slots_total = g_value_get_int(gval_tmp);
+	tmp = g_hash_table_lookup(info, "slots");
+	if (tmp) {
+		slots_total = g_variant_get_int32(tmp);
 	}
-	gval_tmp = g_hash_table_lookup(info, "used");
-	if (gval_tmp) {
-		slots_used = g_value_get_int(gval_tmp);
+	tmp = g_hash_table_lookup(info, "used");
+	if (tmp) {
+		slots_used = g_variant_get_int32(tmp);
 	}
 	if (slots_total - slots_used < MIN_SIM_SLOTS_FREE) {
 		g_message("No more free slots for messages on SIM!");
@@ -661,19 +661,36 @@ _usage_resource_available_handler(GSource *source, char *name,
 }
 
 static void
+_gsm_device_status_callback(GObject* source, GAsyncResult* res, gpointer data)
+{
+	GError *error = NULL;
+	FreeSmartphoneGSMDeviceStatus status;
+
+	status = free_smartphone_gsm_device_get_device_status_finish
+				((FreeSmartphoneGSMDevice *)source, res, &error);
+	if (error) {
+		g_warning("%d: %s", error->code, error->message);
+		g_error_free(error);
+		return;
+	}
+
+	_gsm_device_status_handler(NULL, status, NULL);
+}
+
+static void
 _usage_resource_changed_handler(GSource *source, char *name, gboolean state,
 			  GHashTable * attributes, gpointer data)
 {
 	(void) source;
 	(void) data;
-	gpointer p = NULL;
+	GVariant *tmp;
 	g_debug("resource %s is now %s", name, state ? "enabled" : "disabled");
-	p = g_hash_table_lookup(attributes, "policy");
-	if (p)
-		g_debug("   policy:   %d", g_value_get_int(p));
-	p = g_hash_table_lookup(attributes, "refcount");
-	if (p)
-		g_debug("   refcount: %d", g_value_get_int(p));
+	tmp = g_hash_table_lookup(attributes, "policy");
+	if (tmp)
+		g_debug("   policy:   %s", g_variant_get_string(tmp, NULL));
+	tmp = g_hash_table_lookup(attributes, "refcount");
+	if (tmp)
+		g_debug("   refcount: %d", g_variant_get_int32(tmp));
 
 	if (strcmp(name, "Display") == 0) {
 		g_debug("Display state state changed: %s",
@@ -766,12 +783,11 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 	g_debug("call status handler called, id: %d, status: %d", call_id,
 		status);
 
-	GValue *peerNumber = g_hash_table_lookup(properties, "peer");
+	GVariant *peerNumber = g_hash_table_lookup(properties, "peer");
 	gchar *number;
 	if (peerNumber != NULL) {
-		int len;
-		number = g_strdup_value_contents(peerNumber);
-		len = strlen(number);
+		gsize len;
+		number = g_variant_dup_string(peerNumber, &len);
 		/* FIXME: fix the ugly " bug
 		 * we potentially waste a couple of bytes, fix it in a normal manner*/
 		if (number[0] == '"') {
@@ -939,9 +955,9 @@ _gsm_network_status_handler(GSource *source, GHashTable *status, gpointer data)
 		return;
 	}
 
-	GValue *tmp = g_hash_table_lookup(status, "registration");
+	GVariant *tmp = g_hash_table_lookup(status, "registration");
 	if (tmp) {
-		const char *registration = g_value_get_string(tmp);
+		const char *registration = g_variant_get_string(tmp, NULL);
 		g_debug("fso_network_status_handler(registration=%s)",
 				registration);
 		if (strcmp(registration, "unregistered")) {
