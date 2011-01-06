@@ -701,6 +701,13 @@ _usage_resource_changed_handler(GSource *source, char *name, gboolean state,
 		if (display_state) {
 			fso_dimit(100, DIM_SCREEN_ALWAYS);
 		}
+		return;
+	}
+
+	if (strcmp(name, "GSM") == 0) {
+		free_smartphone_gsm_device_get_device_status
+				(fso.gsm_device, _gsm_device_status_callback, NULL);
+		return;
 	}
 }
 
@@ -876,6 +883,10 @@ _gsm_device_status_handler(GSource *source,
 			   FreeSmartphoneGSMDeviceStatus status,
 			   gpointer data)
 {
+	(void) data;
+	(void) source;
+	g_debug("_gsm_device_status_handler: status=%s",
+		 free_smartphone_gsm_device_status_to_string(status));
 	if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_NO_SIM) {
 		phoneui_notification_call_display_dialog
 			(phoneui.notification, PHONEUI_DIALOG_SIM_NOT_PRESENT,
