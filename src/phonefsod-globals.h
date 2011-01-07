@@ -21,6 +21,7 @@
 #include <freesmartphone.h>
 #include <shr-bindings.h>
 
+gboolean phoneui_is_on_the_bus;
 gboolean offline_mode;
 gboolean sim_auth_needed;
 int inhibit_suspend_on_startup_time;

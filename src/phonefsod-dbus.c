@@ -89,6 +89,8 @@ phonefsod_dbus_setup()
 {
 	GError *error = NULL;
 
+	phoneui_is_on_the_bus = FALSE;
+
 	system_bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
 	if (error) {
 		g_error("%d: %s", error->code, error->message);
@@ -201,6 +203,8 @@ _on_phoneuid_appeared(GDBusConnection *connection,
 {
 	g_debug("yeah, phoneuid is on the bus (%s)", name_owner);
 
+	phoneui_is_on_the_bus = TRUE;
+
 	if (sim_auth_needed && phoneui.notification) {
 		phoneui_notification_call_display_sim_auth
 			(phoneui.notification, 0, NULL,
@@ -216,7 +220,10 @@ _on_phoneuid_vanished(GDBusConnection *connection,
 			 const gchar *name,
 			 gpointer user_data)
 {
-	g_critical("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
+	if (phoneui_is_on_the_bus) {
+		g_critical("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
+		phoneui_is_on_the_bus = FALSE;
+	}
 }
 
 

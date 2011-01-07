@@ -311,6 +311,11 @@ fso_connect_device()
 gboolean
 fso_startup()
 {
+	if (!phoneui_is_on_the_bus) {
+		g_debug("phoneui is not on the bus - delaying FSO startup");
+		return TRUE;
+	}
+
 	g_debug("FSO starting up");
 	if (!offline_mode) {
 		g_message("Inhibiting suspend during startup phase (max %ds)",

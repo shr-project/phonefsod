@@ -799,7 +799,7 @@ extern int main (int argc, char *argv[])
 
 	/* Start glib main loop and run list_resources() */
 	g_debug("entering glib main loop");
-	g_timeout_add(0, fso_startup, NULL);
+	g_timeout_add_seconds(1, fso_startup, NULL);
 	g_main_loop_run(main_loop);
 
 	phonefsod_dbus_shutdown();
