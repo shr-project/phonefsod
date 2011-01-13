@@ -311,11 +311,6 @@ fso_connect_device()
 gboolean
 fso_startup()
 {
-	if (!phoneui_is_on_the_bus) {
-		g_debug("phoneui is not on the bus - delaying FSO startup");
-		return TRUE;
-	}
-
 	g_debug("FSO starting up");
 	if (!offline_mode) {
 		g_message("Inhibiting suspend during startup phase (max %ds)",
@@ -340,12 +335,6 @@ _fso_dim_screen(int percent)
 
 	free_smartphone_device_display_set_brightness
 			(fso.display, b, NULL, NULL);
-
-	/* don't try to use phoneui if not there yet */
-	if (!phoneui_is_on_the_bus) {
-		g_debug("phoneui not on the bus - not handling idle state");
-		return;
-	}
 
 	if (b == 0) {
 		phoneui_idle_screen_call_activate_screensaver

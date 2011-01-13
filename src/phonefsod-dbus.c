@@ -51,45 +51,11 @@ static void _on_phoneuid_vanished(GDBusConnection *connection, const gchar *name
 /* handle dbus errors */
 static void _handle_dbus_error(GError *error, const gchar *msg);
 
-static void
-_phoneui_proxy_cb(GObject *source, GAsyncResult *res, gpointer data)
-{
-	GError *error = NULL;
-	GType type;
-
-	type = GPOINTER_TO_INT(data);
-
-	if (type == TYPE_PHONEUI_CALL_MANAGEMENT) {
-		phoneui.call_management =
-			phoneui_call_management_proxy_new_finish(res, &error);
-	}
-	else if (type == TYPE_PHONEUI_IDLE_SCREEN) {
-		phoneui.idle_screen =
-			phoneui_idle_screen_proxy_new_finish(res, &error);
-	}
-	else if (type == TYPE_PHONEUI_MESSAGES) {
-		phoneui.messages = phoneui_messages_proxy_new_finish(res, &error);
-	}
-	else if (type == TYPE_PHONEUI_NOTIFICATION) {
-		phoneui.notification =
-			phoneui_notification_proxy_new_finish(res, &error);
-	}
-	else {
-		g_warning("unknown proxy... ignoring");
-		return;
-	}
-
-	_handle_dbus_error(error, "failed getting phoneui proxy");
-}
-
-
 
 int
 phonefsod_dbus_setup()
 {
 	GError *error = NULL;
-
-	phoneui_is_on_the_bus = FALSE;
 
 	system_bus = g_bus_get_sync(G_BUS_TYPE_SYSTEM, NULL, &error);
 	if (error) {
@@ -113,25 +79,21 @@ phonefsod_dbus_setup()
 		 G_BUS_NAME_WATCHER_FLAGS_NONE,
 		 _on_phoneuid_appeared, _on_phoneuid_vanished, NULL, NULL);
 
-	phoneui_notification_proxy_new
+	phoneui.notification = phoneui_notification_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_MANAGER_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_NOTIFICATION_PATH, NULL,
-		 _phoneui_proxy_cb, GINT_TO_POINTER(TYPE_PHONEUI_NOTIFICATION));
+		 PHONEUID_SERVICE, PHONEUID_NOTIFICATION_PATH, NULL, &error);
 
-	phoneui_call_management_proxy_new
+	phoneui.call_management = phoneui_call_management_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_CALL_MANAGEMENT_PATH, NULL,
-		 _phoneui_proxy_cb, GINT_TO_POINTER(TYPE_PHONEUI_CALL_MANAGEMENT));
+		 PHONEUID_SERVICE, PHONEUID_CALL_MANAGEMENT_PATH, NULL, &error);
 
-	phoneui_idle_screen_proxy_new
+	phoneui.idle_screen = phoneui_idle_screen_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_MANAGER_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_IDLE_SCREEN_PATH, NULL,
-		 _phoneui_proxy_cb, GINT_TO_POINTER(TYPE_PHONEUI_IDLE_SCREEN));
+		 PHONEUID_SERVICE, PHONEUID_IDLE_SCREEN_PATH, NULL, &error);
 
-	phoneui_messages_proxy_new
+	phoneui.messages = phoneui_messages_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_MANAGER_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL,
-		 _phoneui_proxy_cb, GINT_TO_POINTER(TYPE_PHONEUI_MESSAGES));
+		 PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL, &error);
 
 	return 1;
 }
@@ -203,8 +165,6 @@ _on_phoneuid_appeared(GDBusConnection *connection,
 {
 	g_debug("yeah, phoneuid is on the bus (%s)", name_owner);
 
-	phoneui_is_on_the_bus = TRUE;
-
 	if (sim_auth_needed && phoneui.notification) {
 		phoneui_notification_call_display_sim_auth
 			(phoneui.notification, 0, NULL,
@@ -220,10 +180,7 @@ _on_phoneuid_vanished(GDBusConnection *connection,
 			 const gchar *name,
 			 gpointer user_data)
 {
-	if (phoneui_is_on_the_bus) {
-		g_critical("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
-		phoneui_is_on_the_bus = FALSE;
-	}
+	g_critical("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
 }
 
 
