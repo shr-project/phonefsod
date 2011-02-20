@@ -57,6 +57,7 @@ typedef struct {
 } call_t;
 
 
+static gboolean show_sim_not_present = TRUE;
 static gboolean sim_ready = FALSE;
 static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
@@ -889,9 +890,13 @@ _gsm_device_status_handler(GSource *source,
 	g_debug("_gsm_device_status_handler: status=%s",
 		 free_smartphone_gsm_device_status_to_string(status));
 	if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_NO_SIM) {
-		phoneui_notification_call_display_dialog
-			(phoneui.notification, PHONEUI_DIALOG_SIM_NOT_PRESENT,
-			 NULL, phoneui_show_dialog_cb, NULL);
+		if (show_sim_not_present)
+		{
+			phoneui_notification_call_display_dialog
+				(phoneui.notification, PHONEUI_DIALOG_SIM_NOT_PRESENT,
+				NULL, phoneui_show_dialog_cb, NULL);
+			show_sim_not_present = FALSE;
+		}
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_LOCKED) {
 		if (sim_pin) {
