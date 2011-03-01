@@ -451,7 +451,8 @@ void phoneui_show_sim_auth_cb(GObject *source, GAsyncResult *res, gpointer data)
 	phoneui_notification_call_display_sim_auth_finish
 			(PHONEUI_NOTIFICATION(source), res, &error);
 	/* if showing sim auth worked... and _only_ then */
-	sim_auth_needed = FALSE;
+	if (!error)
+		sim_auth_needed = FALSE;
 	_handle_dbus_error(error, "failed displaying sim auth");
 }
 
