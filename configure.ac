@@ -12,10 +12,9 @@ AC_PROG_CC
 AC_HEADER_STDC
 
 PKG_CHECK_MODULES(GLIB,
-	glib-2.0 >= 2.26.1
+	glib-2.0 >= 2.29.3
 	shr-glib-1.0
 	fso-glib-1.0
-	gdbus-codegen
 )
 
 AC_SUBST(GLIB_CFLAGS)
