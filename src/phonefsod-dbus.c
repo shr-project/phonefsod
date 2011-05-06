@@ -80,7 +80,7 @@ phonefsod_dbus_setup()
 		 _on_phoneuid_appeared, _on_phoneuid_vanished, NULL, NULL);
 
 	phoneui.notification = phoneui_notification_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_MANAGER_FLAGS_DO_NOT_AUTO_START,
+		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
 		 PHONEUID_SERVICE, PHONEUID_NOTIFICATION_PATH, NULL, &error);
 
 	phoneui.call_management = phoneui_call_management_proxy_new_sync
@@ -88,11 +88,11 @@ phonefsod_dbus_setup()
 		 PHONEUID_SERVICE, PHONEUID_CALL_MANAGEMENT_PATH, NULL, &error);
 
 	phoneui.idle_screen = phoneui_idle_screen_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_MANAGER_FLAGS_DO_NOT_AUTO_START,
+		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
 		 PHONEUID_SERVICE, PHONEUID_IDLE_SCREEN_PATH, NULL, &error);
 
 	phoneui.messages = phoneui_messages_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_MANAGER_FLAGS_DO_NOT_AUTO_START,
+		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
 		 PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL, &error);
 
 	return 1;
