@@ -127,7 +127,7 @@ _on_bus_acquired (GDBusConnection *connection,
 	g_signal_connect(usage, "handle-set-pin", G_CALLBACK(_set_pin), NULL);
 
 
-	g_dbus_interface_skelleton_export(G_DBUS_INTERFACE_SKELETON(usage),
+	g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(usage),
 					     connection,
 					     PHONEFSOD_USAGE_PATH,
 					     &error);
