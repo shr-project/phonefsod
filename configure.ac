@@ -13,6 +13,7 @@ AC_HEADER_STDC
 
 PKG_CHECK_MODULES(GLIB,
 	glib-2.0 >= 2.29.3
+	gio-2.0 >= 2.29.3
 	shr-glib-1.0
 	fso-glib-1.0
 )
