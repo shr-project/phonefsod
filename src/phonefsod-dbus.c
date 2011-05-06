@@ -118,7 +118,7 @@ _on_bus_acquired (GDBusConnection *connection,
 
 	g_debug("Yo, on the bus :-) (%s)", name);
 
-	usage = phonefso_usage_stub_new();
+	usage = phonefso_usage_skeleton_new();
 	g_signal_connect(usage, "handle-set-offline-mode", G_CALLBACK(_set_offline_mode), NULL);
 	g_signal_connect(usage, "handle-get-offline-mode", G_CALLBACK(_get_offline_mode), NULL);
 	g_signal_connect(usage, "handle-set-default-brightness", G_CALLBACK(_set_default_brightness), NULL);
@@ -127,7 +127,7 @@ _on_bus_acquired (GDBusConnection *connection,
 	g_signal_connect(usage, "handle-set-pin", G_CALLBACK(_set_pin), NULL);
 
 
-	g_dbus_interface_register_object(G_DBUS_INTERFACE(usage),
+	g_dbus_interface_skelleton_export(G_DBUS_INTERFACE_SKELETON(usage),
 					     connection,
 					     PHONEFSOD_USAGE_PATH,
 					     &error);
