@@ -337,10 +337,16 @@ _fso_dim_screen(int percent)
 	free_smartphone_device_display_set_brightness
 			(fso.display, b, NULL, NULL);
 
+	if (percent == 100) {
+		free_smartphone_device_display_set_backlight_power
+			(fso.display, TRUE, NULL, NULL);
+	}
 	if (b == 0) {
 		phoneui_idle_screen_call_activate_screensaver
 			(phoneui.idle_screen, NULL,
 			 phoneui_activate_screensaver_cb, NULL);
+		free_smartphone_device_display_set_backlight_power
+			(fso.display, FALSE, NULL, NULL);
 	}
 	else {
 		phoneui_idle_screen_call_deactivate_screensaver

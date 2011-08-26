@@ -331,7 +331,7 @@ _load_config()
 		s = g_key_file_get_string(keyfile, "idle",
 					"idle_screen", &error);
 		if (error) {
-			g_debug("no idle_screen found in config - defaulting to lock,aux");
+			g_debug("no idle_screen found in config - defaulting to lock,aux,suspend");
 			idle_screen = IDLE_SCREEN_LOCK | IDLE_SCREEN_AUX | IDLE_SCREEN_SUSPEND;
 			g_error_free(error);
 			error = NULL;
