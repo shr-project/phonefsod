@@ -911,6 +911,7 @@ _gsm_device_status_handler(GSource *source,
 			fso_set_functionality();
 		}
 		else {
+			g_debug("SIM auth needed... showing PIN dialog");
 			sim_auth_needed = TRUE;
 			phoneui_notification_call_display_sim_auth
 				(phoneui.notification, status, NULL,
