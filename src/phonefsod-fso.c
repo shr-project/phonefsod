@@ -318,8 +318,16 @@ gboolean
 fso_startup()
 {
 	g_debug("FSO starting up");
-	_fso_list_resources();
+
+	/* we only have to list the resources when we did
+	 * not yet handle it due to a resource available
+	 * signal for the GSM resource */
+	if (!gsm_request_running && !gsm_available) {
+		_fso_list_resources();
+	}
+
 	fso_dimit(100, DIM_SCREEN_ALWAYS);
+
 	return FALSE;
 }
 
