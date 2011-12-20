@@ -62,7 +62,7 @@ static gboolean sim_ready = FALSE;
 static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
 static gboolean func_is_set = FALSE;
-static time_t startup_time = FALSE;
+static time_t startup_time = 0;
 static call_t *incoming_calls = NULL;
 static call_t *outgoing_calls = NULL;
 static int incoming_calls_size = 0;
@@ -133,6 +133,11 @@ gboolean
 fso_init()
 {
 	sim_auth_needed = FALSE;
+	if (!offline_mode) {
+		g_message("Inhibiting suspend during startup phase (max %ds)",
+			  inhibit_suspend_on_startup_time);
+		startup_time = time(NULL);
+	}
 
 	fso_connect_usage();
 	fso_connect_gsm();
@@ -313,11 +318,6 @@ gboolean
 fso_startup()
 {
 	g_debug("FSO starting up");
-	if (!offline_mode) {
-		g_message("Inhibiting suspend during startup phase (max %ds)",
-			  inhibit_suspend_on_startup_time);
-		startup_time = time(NULL);
-	}
 	_fso_list_resources();
 	fso_dimit(100, DIM_SCREEN_ALWAYS);
 	return FALSE;
