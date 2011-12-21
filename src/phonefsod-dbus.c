@@ -143,7 +143,7 @@ _on_name_acquired (GDBusConnection *connection,
 		    const gchar     *name,
 		    gpointer         user_data)
 {
-	g_debug ("Acquired the name %s on the session bus\n", name);
+	g_debug ("Acquired the name %s on the system bus\n", name);
 }
 
 static void
@@ -151,7 +151,7 @@ _on_name_lost (GDBusConnection *connection,
 		const gchar     *name,
 		gpointer         user_data)
 {
-	g_debug ("Lost the name %s on the session bus\n", name);
+	g_debug ("Lost the name %s on the system bus\n", name);
 }
 
 
