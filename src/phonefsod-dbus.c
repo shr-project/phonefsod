@@ -50,6 +50,7 @@ static void _on_phoneuid_vanished(GDBusConnection *connection, const gchar *name
 
 /* handle dbus errors */
 static void _handle_dbus_error(GError *error, const gchar *msg);
+static void _handle_phoneuid_proxy_error(GError *error, const gchar *iface);
 
 
 int
@@ -61,11 +62,6 @@ phonefsod_dbus_setup()
 	if (error) {
 		g_error("%d: %s", error->code, error->message);
 		g_error_free(error);
-		return 0;
-	}
-
-	/* connect and init FSO */
-	if (!fso_init()) {
 		return 0;
 	}
 
@@ -81,19 +77,27 @@ phonefsod_dbus_setup()
 
 	phoneui.notification = phoneui_notification_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_NOTIFICATION_PATH, NULL, &error);
+		PHONEUID_SERVICE, PHONEUID_NOTIFICATION_PATH, NULL, &error);
+	_handle_phoneuid_proxy_error(error, PHONEUID_NOTIFICATION_PATH);
 
 	phoneui.call_management = phoneui_call_management_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_CALL_MANAGEMENT_PATH, NULL, &error);
+		PHONEUID_SERVICE, PHONEUID_CALL_MANAGEMENT_PATH, NULL, &error);
+	_handle_phoneuid_proxy_error(error, PHONEUID_CALL_MANAGEMENT_PATH);
 
 	phoneui.idle_screen = phoneui_idle_screen_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_IDLE_SCREEN_PATH, NULL, &error);
+		PHONEUID_SERVICE, PHONEUID_IDLE_SCREEN_PATH, NULL, &error);
+	_handle_phoneuid_proxy_error(error, PHONEUID_IDLE_SCREEN_PATH);
 
 	phoneui.messages = phoneui_messages_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		 PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL, &error);
+		PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL, &error);
+	_handle_phoneuid_proxy_error(error, PHONEUID_MESSAGES_PATH);
+
+	/* connect and init FSO */
+	if (!fso_init())
+		return 0;
 
 	return 1;
 }
@@ -518,5 +522,14 @@ void _handle_dbus_error(GError* error, const gchar* msg)
 	if (error) {
 		g_critical("%s: (%d) %s", msg, error->code, error->message);
 		g_error_free(error);
+	}
+}
+
+void _handle_phoneuid_proxy_error(GError *error, const gchar *iface)
+{
+	if (error) {
+		g_warning("getting proxy for %s failed: (%d) %s", iface, error->code, error->message);
+		g_error_free(error);
+		error = NULL;
 	}
 }
