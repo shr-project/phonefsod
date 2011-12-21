@@ -724,7 +724,6 @@ extern int main (int argc, char *argv[])
 
 	/* initialize threading and mainloop */
 	g_type_init();
-	g_thread_init(NULL);
 	main_loop = g_main_loop_new (NULL, FALSE);
 
 	/* handle command line arguments */
