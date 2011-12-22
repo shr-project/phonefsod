@@ -62,6 +62,7 @@ static gboolean sim_ready = FALSE;
 static gboolean gsm_request_running = FALSE;
 static gboolean gsm_available = FALSE;
 static gboolean func_is_set = FALSE;
+static gboolean sim_check_needed = TRUE;
 static time_t startup_time = 0;
 static call_t *incoming_calls = NULL;
 static call_t *outgoing_calls = NULL;
@@ -75,6 +76,8 @@ static gboolean _fso_request_gsm();
 static void _fso_suspend();
 static void _stop_startup();
 static void _startup_check();
+static gint _fso_sim_info();
+
 
 /* dbus method callbacks */
 static void _list_resources_callback(GObject *source, GAsyncResult *res, gpointer data);
@@ -474,6 +477,15 @@ _fso_suspend(void)
 	free_smartphone_usage_suspend(fso.usage, NULL, NULL);
 }
 
+static gint
+_fso_sim_info()
+{
+	free_smartphone_gsm_sim_get_sim_info
+		(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
+	return 0;
+}
+
+
 /* --- dbus callbacks --- */
 static void
 _list_resources_callback(GObject *source, GAsyncResult *res, gpointer data)
@@ -616,7 +628,7 @@ _gsm_sim_sim_info_callback(GObject* source, GAsyncResult* res, gpointer data)
 	(void) data;
 	GError *error = NULL;
 	GHashTable *info;
-	int slots_total = 0, slots_used = 0;
+	int slots_total = -1, slots_used = -1;
 	GVariant *tmp;
 
 	info = free_smartphone_gsm_sim_get_sim_info_finish(fso.gsm_sim, res, &error);
@@ -629,23 +641,33 @@ _gsm_sim_sim_info_callback(GObject* source, GAsyncResult* res, gpointer data)
 	tmp = g_hash_table_lookup(info, "slots");
 	if (tmp) {
 		slots_total = g_variant_get_int32(tmp);
+		g_debug("SimInfo has slots total = %d", slots_total);
 	}
 	tmp = g_hash_table_lookup(info, "used");
 	if (tmp) {
 		slots_used = g_variant_get_int32(tmp);
+		g_debug("SimInfo has slots used = %d", slots_used);
 	}
-	if (slots_total - slots_used < MIN_SIM_SLOTS_FREE) {
-		g_message("No more free slots for messages on SIM!");
-		// TODO: verify if one free slot is needed for receiving
-		//       messages and remove this dialog if not
-		phoneui_notification_call_display_dialog
-			(phoneui.notification, PHONEUI_DIALOG_MESSAGE_STORAGE_FULL,
-			 NULL, phoneui_show_dialog_cb, NULL);
+	if (slots_total == -1 || slots_used == -1) {
+		g_debug("SimInfo has no slots and/or used properties - retrying later");
+		g_timeout_add_seconds(3, _fso_sim_info, NULL);
 	}
 	else {
-		g_debug("SIM has %d free slots for messages",
-			slots_total - slots_used);
+		sim_check_needed = FALSE;
+		if (slots_total - slots_used < MIN_SIM_SLOTS_FREE) {
+			g_message("No more free slots for messages on SIM!");
+			// TODO: verify if one free slot is needed for receiving
+			//       messages and remove this dialog if not
+			phoneui_notification_call_display_dialog
+				(phoneui.notification, PHONEUI_DIALOG_MESSAGE_STORAGE_FULL,
+				 NULL, phoneui_show_dialog_cb, NULL);
+		}
+		else {
+			g_debug("SIM has %d free slots for messages",
+				slots_total - slots_used);
+		}
 	}
+
 	g_hash_table_unref(info);
 }
 
@@ -924,8 +946,9 @@ _gsm_device_status_handler(GSource *source,
 		if (!func_is_set) {
 			fso_set_functionality();
 		}
-		free_smartphone_gsm_sim_get_sim_info
-			(fso.gsm_sim, _gsm_sim_sim_info_callback, NULL);
+		if (sim_check_needed) {
+			g_timeout_add_seconds(2, _fso_sim_info, NULL);
+		}
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_REGISTERED) {
 		g_debug("alive-registered");
