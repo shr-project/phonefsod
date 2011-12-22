@@ -640,7 +640,7 @@ _gsm_sim_sim_info_callback(GObject* source, GAsyncResult* res, gpointer data)
 		//       messages and remove this dialog if not
 		phoneui_notification_call_display_dialog
 			(phoneui.notification, PHONEUI_DIALOG_MESSAGE_STORAGE_FULL,
-			 NULL, phoneui_display_message_cb, NULL);
+			 NULL, phoneui_show_dialog_cb, NULL);
 	}
 	else {
 		g_debug("SIM has %d free slots for messages",
