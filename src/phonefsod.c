@@ -33,7 +33,6 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 #include <glib-object.h>
-#include <glib/gthread.h>
 
 #include "phonefsod-dbus.h"
 #include "phonefsod-fso.h"

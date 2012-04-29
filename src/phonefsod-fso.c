@@ -18,7 +18,6 @@
 #include <string.h>
 #include <time.h>
 #include <glib.h>
-#include <glib/gthread.h>
 #include <gio/gio.h>
 #include <freesmartphone.h>
 #include <shr-bindings.h>
