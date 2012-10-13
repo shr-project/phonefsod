@@ -376,6 +376,16 @@ _load_config()
 		else {
 			auto_suspend = SUSPEND_NORMAL;
 		}
+
+		/* --- [settings] --- */
+		quick_settings_power =
+			g_key_file_get_boolean(keyfile, "settings",
+					"quick_settings_power", &error);
+		if (error) {
+			quick_settings_power = FALSE;
+			g_error_free(error);
+			error = NULL;
+		}
 		if (s)
 			free(s);
 

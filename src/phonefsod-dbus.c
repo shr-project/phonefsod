@@ -510,6 +510,14 @@ void phoneui_toggle_idle_cb(GObject *source, GAsyncResult *res, gpointer data)
 	_handle_dbus_error(error, "failed toggling idle screen");
 }
 
+void phoneui_show_settings_cb(GObject *source, GAsyncResult *res, gpointer data)
+{
+	GError *error = NULL;
+	phoneui_settings_call_display_quick_settings_finish
+			(PHONEUI_SETTINGS(source), res, &error);
+	_handle_dbus_error(error, "failed showing quick settings");
+}
+
 void phoneui_activate_screensaver_cb(GObject *source, GAsyncResult *res, gpointer data)
 {
 	GError *error = NULL;

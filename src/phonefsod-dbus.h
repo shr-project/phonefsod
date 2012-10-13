@@ -40,4 +40,6 @@ void phoneui_toggle_idle_cb(GObject *source, GAsyncResult *res, gpointer data);
 void phoneui_activate_screensaver_cb(GObject *source, GAsyncResult *res, gpointer data);
 void phoneui_deactivate_screensaver_cb(GObject *source, GAsyncResult *res, gpointer data);
 
+void phoneui_show_settings_cb(GObject *source, GAsyncResult *res, gpointer data);
+
 #endif

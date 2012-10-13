@@ -22,6 +22,7 @@
 #include <shr-bindings.h>
 
 gboolean offline_mode;
+gboolean quick_settings_power;
 gboolean sim_auth_needed;
 int inhibit_suspend_on_startup_time;
 gboolean show_incoming_sms;
@@ -67,6 +68,7 @@ struct SPhoneui {
 	PhoneuiMessages *messages;
 	PhoneuiNotification *notification;
 	PhoneuiIdleScreen *idle_screen;
+	PhoneuiSettings *quick_settings;
 } phoneui;
 
 
