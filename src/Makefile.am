@@ -19,5 +19,5 @@ phonefsod_CFLAGS = \
 	@GLIB_CFLAGS@ \
 	-ggdb
 
-phonefsod_LDFLAGS = @GLIB_LIBS@
+phonefsod_LDADD = @GLIB_LIBS@
 
