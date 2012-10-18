@@ -43,6 +43,8 @@
 #define PHONEUID_PHONE_LOG_PATH              PHONEUID_PATH "/PhoneLog"
 #define PHONEUID_IDLE_SCREEN_PATH            PHONEUID_PATH "/IdleScreen"
 
+#define PHONEUID_SETTINGS_PATH               PHONEUID_PATH "/Settings"
+
 /* freesmartphone.org */
 #define FSO_USAGE_SERVICE                    "org.freesmartphone.ousaged"
 #define FSO_USAGE_PATH                       "/org/freesmartphone/Usage"

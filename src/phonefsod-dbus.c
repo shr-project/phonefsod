@@ -94,6 +94,12 @@ phonefsod_dbus_setup()
 	if (!_handle_phoneuid_proxy_error(error, PHONEUID_IDLE_SCREEN_PATH))
 		return 0;
 
+	phoneui.settings = phoneui_settings_proxy_new_sync
+		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+		PHONEUID_SERVICE, PHONEUID_SETTINGS_PATH, NULL, &error);
+	if (!_handle_phoneuid_proxy_error(error, PHONEUID_SETTINGS_PATH))
+		return 0;
+
 	phoneui.messages = phoneui_messages_proxy_new_sync
 		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
 		PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL, &error);
@@ -510,7 +516,7 @@ void phoneui_toggle_idle_cb(GObject *source, GAsyncResult *res, gpointer data)
 	_handle_dbus_error(error, "failed toggling idle screen");
 }
 
-void phoneui_show_settings_cb(GObject *source, GAsyncResult *res, gpointer data)
+void phoneui_show_quick_settings_cb(GObject *source, GAsyncResult *res, gpointer data)
 {
 	GError *error = NULL;
 	phoneui_settings_call_display_quick_settings_finish

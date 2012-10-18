@@ -68,7 +68,7 @@ struct SPhoneui {
 	PhoneuiMessages *messages;
 	PhoneuiNotification *notification;
 	PhoneuiIdleScreen *idle_screen;
-	PhoneuiSettings *quick_settings;
+	PhoneuiSettings *settings;
 } phoneui;
 
 

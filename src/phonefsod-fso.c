@@ -814,8 +814,8 @@ _device_input_event_handler(GSource *source, char *src,
 	}
 	if (quick_settings_power && !strcmp(src, "POWER") &&
 		state == FREE_SMARTPHONE_DEVICE_INPUT_STATE_RELEASED) {
-		phoneui_settings_call_display_quick_settings(phoneui.quick_settings, NULL,
-						    phoneui_show_settings_cb, NULL);
+		phoneui_settings_call_display_quick_settings(phoneui.settings, NULL,
+						    phoneui_show_quick_settings_cb, NULL);
 	}
 }
 
