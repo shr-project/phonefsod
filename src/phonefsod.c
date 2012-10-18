@@ -1,7 +1,8 @@
 /*
- *  Copyright (C) 2009-2010
+ *  Copyright (C) 2009-2012
  *      Authors (alphabetical) :
  *              Klaus 'mrmoku' Kurzmann <mok@fluxnetz.de>
+ *              Lukas 'slyon' Märdian <luk@slyon.de>
  *
  * glib daemon framework
  *              James Scott Jr. <skoona@verizon.net>

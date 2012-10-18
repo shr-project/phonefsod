@@ -1,7 +1,8 @@
 /*
- *  Copyright (C) 2009-2010
+ *  Copyright (C) 2009-2012
  *      Authors (alphabetical) :
  *              Klaus 'mrmoku' Kurzmann <mok@fluxnetz.de>
+ *              Lukas 'slyon' Märdian <luk@slyon.de>
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU Public License as published by
