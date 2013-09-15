@@ -202,7 +202,6 @@ _show_sim_auth()
 	phoneui_notification_call_display_sim_auth
 		(phoneui.notification, 0, NULL,
 		 phoneui_show_sim_auth_cb, NULL);
-	return FALSE;
 }
 
 
