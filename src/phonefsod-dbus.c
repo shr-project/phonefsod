@@ -48,7 +48,6 @@ static void _on_name_lost (GDBusConnection *connection, const gchar *name, gpoin
 /* g_bus_watch_proxy callbacks */
 static void _on_phoneuid_appeared(GDBusConnection *connection, const gchar *name, const gchar *name_owner, gpointer user_data);
 static void _on_phoneuid_vanished(GDBusConnection *connection, const gchar *name, gpointer user_data);
-static gint _show_sim_auth();
 
 /* handle dbus errors */
 static void _handle_dbus_error(GError *error, const gchar *msg);
@@ -182,8 +181,12 @@ _on_phoneuid_appeared(GDBusConnection *connection,
 	g_debug("yeah, phoneuid is on the bus (%s)", name_owner);
 
 	if (sim_auth_needed && phoneui.notification) {
-		g_timeout_add_seconds(2, _show_sim_auth, NULL);
+		phoneui_notification_call_display_sim_auth
+			(phoneui.notification, 0, NULL,
+			 phoneui_show_sim_auth_cb, NULL);
+		return;
 	}
+
 }
 
 static void
@@ -191,18 +194,9 @@ _on_phoneuid_vanished(GDBusConnection *connection,
 			 const gchar *name,
 			 gpointer user_data)
 {
-	g_message("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
+	g_critical("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
 }
 
-
-static gint
-_show_sim_auth()
-{
-	g_debug("showing PIN dialog");
-	phoneui_notification_call_display_sim_auth
-		(phoneui.notification, 0, NULL,
-		 phoneui_show_sim_auth_cb, NULL);
-}
 
 
 /* method call handlers */
