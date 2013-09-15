@@ -41,7 +41,6 @@ static void _write_default_brightness_to_config(void);
 static void _write_offline_mode_to_config(void);
 
 /* g_bus_own_name callbacks */
-static void _on_bus_acquired (GDBusConnection *connection, const gchar *name, gpointer user_data);
 static void _on_name_acquired (GDBusConnection *connection, const gchar *name, gpointer user_data);
 static void _on_name_lost (GDBusConnection *connection, const gchar *name, gpointer user_data);
 
@@ -53,6 +52,33 @@ static void _on_phoneuid_vanished(GDBusConnection *connection, const gchar *name
 static void _handle_dbus_error(GError *error, const gchar *msg);
 static int _handle_phoneuid_proxy_error(GError *error, const gchar *iface);
 
+static void
+_on_bus_acquired (GDBusConnection *connection)
+{
+        /* This is where we'd export some objects on the bus */
+        GError *error = NULL;
+
+        g_debug("Yo, on the bus :-) (%s)", g_dbus_connection_get_unique_name(connection));
+
+        usage = phonefso_usage_skeleton_new();
+        g_signal_connect(usage, "handle-set-offline-mode", G_CALLBACK(_set_offline_mode), NULL);
+        g_signal_connect(usage, "handle-get-offline-mode", G_CALLBACK(_get_offline_mode), NULL);
+        g_signal_connect(usage, "handle-set-default-brightness", G_CALLBACK(_set_default_brightness), NULL);
+        g_signal_connect(usage, "handle-get-default-brightness", G_CALLBACK(_get_default_brightness), NULL);
+        g_signal_connect(usage, "handle-set-pdp-credentials", G_CALLBACK(_set_pdp_credentials), NULL);
+        g_signal_connect(usage, "handle-set-pin", G_CALLBACK(_set_pin), NULL);
+
+
+        g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(usage),
+                                             connection,
+                                             PHONEFSOD_USAGE_PATH,
+                                             &error);
+
+        if (error) {
+                g_critical("Failed to register %s: %s", PHONEFSOD_USAGE_PATH, error->message);
+                g_error_free(error);
+        }
+}
 
 int
 phonefsod_dbus_setup()
@@ -65,46 +91,18 @@ phonefsod_dbus_setup()
 		g_error_free(error);
 		return 0;
 	}
+	
+	_on_bus_acquired(system_bus);
 
 	phonefsod_owner_id = g_bus_own_name_on_connection
 		(system_bus, PHONEFSOD_SERVICE,
 		 G_BUS_NAME_OWNER_FLAGS_REPLACE | G_BUS_NAME_OWNER_FLAGS_ALLOW_REPLACEMENT,
-		 _on_bus_acquired, _on_name_acquired, _on_name_lost, NULL);
+		 _on_name_acquired, _on_name_lost, NULL, NULL);
 
 	phoneuid_watcher_id = g_bus_watch_name_on_connection
 		(system_bus, PHONEUID_SERVICE,
 		 G_BUS_NAME_WATCHER_FLAGS_NONE,
 		 _on_phoneuid_appeared, _on_phoneuid_vanished, NULL, NULL);
-
-	phoneui.notification = phoneui_notification_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		PHONEUID_SERVICE, PHONEUID_NOTIFICATION_PATH, NULL, &error);
-	if (!_handle_phoneuid_proxy_error(error, PHONEUID_NOTIFICATION_PATH))
-		return 0;
-
-	phoneui.call_management = phoneui_call_management_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		PHONEUID_SERVICE, PHONEUID_CALL_MANAGEMENT_PATH, NULL, &error);
-	if (!_handle_phoneuid_proxy_error(error, PHONEUID_CALL_MANAGEMENT_PATH))
-		return 0;
-
-	phoneui.idle_screen = phoneui_idle_screen_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		PHONEUID_SERVICE, PHONEUID_IDLE_SCREEN_PATH, NULL, &error);
-	if (!_handle_phoneuid_proxy_error(error, PHONEUID_IDLE_SCREEN_PATH))
-		return 0;
-
-	phoneui.settings = phoneui_settings_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		PHONEUID_SERVICE, PHONEUID_SETTINGS_PATH, NULL, &error);
-	if (!_handle_phoneuid_proxy_error(error, PHONEUID_SETTINGS_PATH))
-		return 0;
-
-	phoneui.messages = phoneui_messages_proxy_new_sync
-		(system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
-		PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL, &error);
-	if (!_handle_phoneuid_proxy_error(error, PHONEUID_MESSAGES_PATH))
-		return 0;
 
 	/* connect and init FSO */
 	if (!fso_init())
@@ -122,36 +120,6 @@ phonefsod_dbus_shutdown()
 
 
 /* handlers for g_bus_own_name */
-
-static void
-_on_bus_acquired (GDBusConnection *connection,
-		   const gchar     *name,
-		   gpointer         user_data)
-{
-	/* This is where we'd export some objects on the bus */
-	GError *error = NULL;
-
-	g_debug("Yo, on the bus :-) (%s)", name);
-
-	usage = phonefso_usage_skeleton_new();
-	g_signal_connect(usage, "handle-set-offline-mode", G_CALLBACK(_set_offline_mode), NULL);
-	g_signal_connect(usage, "handle-get-offline-mode", G_CALLBACK(_get_offline_mode), NULL);
-	g_signal_connect(usage, "handle-set-default-brightness", G_CALLBACK(_set_default_brightness), NULL);
-	g_signal_connect(usage, "handle-get-default-brightness", G_CALLBACK(_get_default_brightness), NULL);
-	g_signal_connect(usage, "handle-set-pdp-credentials", G_CALLBACK(_set_pdp_credentials), NULL);
-	g_signal_connect(usage, "handle-set-pin", G_CALLBACK(_set_pin), NULL);
-
-
-	g_dbus_interface_skeleton_export(G_DBUS_INTERFACE_SKELETON(usage),
-					     connection,
-					     PHONEFSOD_USAGE_PATH,
-					     &error);
-
-	if (error) {
-		g_critical("Failed to register %s: %s", PHONEFSOD_USAGE_PATH, error->message);
-		g_error_free(error);
-	}
-}
 
 static void
 _on_name_acquired (GDBusConnection *connection,
@@ -178,8 +146,40 @@ _on_phoneuid_appeared(GDBusConnection *connection,
 			 const gchar *name_owner,
 			 gpointer user_data)
 {
+        GError *error = NULL;
+  
 	g_debug("yeah, phoneuid is on the bus (%s)", name_owner);
 
+        phoneui.notification = phoneui_notification_proxy_new_sync
+                (system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+                PHONEUID_SERVICE, PHONEUID_NOTIFICATION_PATH, NULL, &error);
+        if (!_handle_phoneuid_proxy_error(error, PHONEUID_NOTIFICATION_PATH))
+                g_message("!!! could not set up notification proxy!");
+
+        phoneui.call_management = phoneui_call_management_proxy_new_sync
+                (system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+                PHONEUID_SERVICE, PHONEUID_CALL_MANAGEMENT_PATH, NULL, &error);
+        if (!_handle_phoneuid_proxy_error(error, PHONEUID_CALL_MANAGEMENT_PATH))
+                g_message("!!! could not set up call management proxy!");
+
+        phoneui.idle_screen = phoneui_idle_screen_proxy_new_sync
+                (system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+                PHONEUID_SERVICE, PHONEUID_IDLE_SCREEN_PATH, NULL, &error);
+        if (!_handle_phoneuid_proxy_error(error, PHONEUID_IDLE_SCREEN_PATH))
+                g_message("!!! could not set up idle screen proxy!");
+
+        phoneui.settings = phoneui_settings_proxy_new_sync
+                (system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+                PHONEUID_SERVICE, PHONEUID_SETTINGS_PATH, NULL, &error);
+        if (!_handle_phoneuid_proxy_error(error, PHONEUID_SETTINGS_PATH))
+                g_message("!!! could not set up settings proxy!");
+
+        phoneui.messages = phoneui_messages_proxy_new_sync
+                (system_bus, G_DBUS_PROXY_FLAGS_DO_NOT_AUTO_START,
+                PHONEUID_SERVICE, PHONEUID_MESSAGES_PATH, NULL, &error);
+        if (!_handle_phoneuid_proxy_error(error, PHONEUID_MESSAGES_PATH))
+                g_message("!!! could not set up messages proxy!");
+        
 	if (sim_auth_needed && phoneui.notification) {
 		phoneui_notification_call_display_sim_auth
 			(phoneui.notification, 0, NULL,
