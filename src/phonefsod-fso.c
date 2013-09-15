@@ -77,6 +77,7 @@ static void _fso_suspend();
 static void _stop_startup();
 static void _startup_check();
 static gint _fso_sim_info();
+static gint _display_sim_auth();
 
 
 /* dbus method callbacks */
@@ -915,6 +916,16 @@ _gsm_call_status_handler(GSource *source, int call_id, int status,
 	}
 }
 
+static gint
+_display_sim_auth()
+{
+	g_debug("showing PIN dialog");
+	phoneui_notification_call_display_sim_auth
+		(phoneui.notification, 0, NULL,
+		 phoneui_show_sim_auth_cb, NULL);
+	return FALSE;
+}
+
 static void
 _gsm_device_status_handler(GSource *source,
 			   FreeSmartphoneGSMDeviceStatus status,
@@ -940,9 +951,7 @@ _gsm_device_status_handler(GSource *source,
 		else {
 			g_debug("SIM auth needed... showing PIN dialog");
 			sim_auth_needed = TRUE;
-			phoneui_notification_call_display_sim_auth
-				(phoneui.notification, status, NULL,
-				 phoneui_show_sim_auth_cb, NULL);
+			g_timeout_add_seconds(2, _display_sim_auth, NULL);
 		}
 	}
 	else if (status == FREE_SMARTPHONE_GSM_DEVICE_STATUS_ALIVE_SIM_READY) {
