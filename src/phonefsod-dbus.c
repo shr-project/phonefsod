@@ -184,7 +184,6 @@ _on_phoneuid_appeared(GDBusConnection *connection,
 		phoneui_notification_call_display_sim_auth
 			(phoneui.notification, 0, NULL,
 			 phoneui_show_sim_auth_cb, NULL);
-		return;
 	}
 
 }
@@ -194,7 +193,7 @@ _on_phoneuid_vanished(GDBusConnection *connection,
 			 const gchar *name,
 			 gpointer user_data)
 {
-	g_critical("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
+	g_message("!!! ouch, phoneuid is gone - telephony won't work anymore !!!");
 }
 
 
